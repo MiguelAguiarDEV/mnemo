@@ -892,13 +892,14 @@ func (o *Orchestrator) ChatQuick(userID string, conversationID int64, message st
 	systemPrompt := o.buildSystemPromptV2(preloadSkills)
 	messages := o.buildChatMessages(history, cleanedMessage)
 
-	// 5. Single-turn call with MaxTurns=1 — no tool loop.
+	// 5. Quick call with MaxTurns=5 — enough for Claude to think and respond.
+	// claude-agent-sdk query() counts the initial message as a turn, so 1 is never enough.
 	resp, err := o.claudeClient.Send(context.Background(), prometheus.ChatRequest{
 		SystemPrompt: systemPrompt,
 		Messages:     messages,
 		Model:        model.Model,
 		MaxTokens:    model.MaxTokens,
-		MaxTurns:     1,
+		MaxTurns:     5,
 	})
 	if err != nil {
 		return QuickResponse{}, fmt.Errorf("jarvis: quick chat: %w", err)
