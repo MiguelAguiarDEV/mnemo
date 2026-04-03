@@ -1,0 +1,2294 @@
+openapi: 3.0.3
+info:
+  title: JARVIS API
+  description: |
+    JARVIS personal AI assistant platform API.
+    Provides chat orchestration, task management, knowledge graph, cost tracking,
+    traces, activity feeds, and system monitoring.
+  version: 0.1.0
+  contact:
+    name: JARVIS
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: http://mnemo-cloud:8080
+    description: Docker internal
+
+tags:
+  - name: Auth
+    description: Authentication and API key management
+  - name: Chat
+    description: Chat orchestration with SSE streaming
+  - name: Conversations
+    description: Conversation CRUD
+  - name: Tasks
+    description: Task management with status transitions
+  - name: Activity
+    description: Unified activity feed
+  - name: Events
+    description: Real-time SSE event stream
+  - name: Graph
+    description: Knowledge graph and observations
+  - name: Traces
+    description: Agent tool call tracing
+  - name: Costs
+    description: Cost tracking and budget management
+  - name: System
+    description: Health, metrics, and system info
+  - name: Notifications
+    description: Push notifications (Discord DM, etc.)
+  - name: Jobs
+    description: Async delegation jobs
+  - name: Sync
+    description: Data sync (push/pull)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        JWT access token or API key (prefixed with `eng_`).
+        Obtain JWT via POST /auth/login. Obtain API key via POST /auth/api-key.
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "invalid credentials"
+
+    # --- Auth ---
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          example: "mx"
+        email:
+          type: string
+          format: email
+          example: "mx@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "strongpassword123"
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: Username or email
+          example: "mx"
+        username:
+          type: string
+          description: Alternative to identifier (deprecated)
+        password:
+          type: string
+          format: password
+          example: "strongpassword123"
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 3600
+        user_id:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 3600
+
+    APIKeyResponse:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: "Plain API key (eng_...). Store securely -- shown only once."
+          example: "eng_abc123..."
+        message:
+          type: string
+          example: "Store this key securely. It will not be shown again."
+
+    # --- Chat ---
+    ChatRequest:
+      type: object
+      required: [conversation_id, message]
+      properties:
+        conversation_id:
+          type: integer
+          format: int64
+          example: 1
+        message:
+          type: string
+          example: "What tasks are open?"
+
+    ChatSSETokenEvent:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "Here"
+
+    ChatSSEDoneEvent:
+      type: object
+      properties:
+        done:
+          type: boolean
+          example: true
+        message_id:
+          type: integer
+          format: int64
+
+    # --- Conversations ---
+    CreateConversationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Project planning"
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        conversation_id:
+          type: integer
+          format: int64
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    RenameConversationRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          example: "Updated title"
+
+    # --- Tasks ---
+    CreateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          example: "Implement user auth"
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          default: medium
+        assignee_type:
+          type: string
+          enum: [user, agent]
+          default: user
+        assignee:
+          type: string
+        source:
+          type: string
+          enum: [user, agent, system]
+          default: user
+        source_session_id:
+          type: string
+        project:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        due_at:
+          type: string
+          format: date-time
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, done, blocked, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        assignee:
+          type: string
+        project:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        due_at:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+        parent_id:
+          type: integer
+          format: int64
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [open, in_progress, done, blocked, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        assignee_type:
+          type: string
+          enum: [user, agent]
+        assignee:
+          type: string
+          nullable: true
+        source:
+          type: string
+        source_session_id:
+          type: string
+          nullable: true
+        project:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- Activity ---
+    ActivityEntry:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [tool_call, observation, session, task_update]
+        id:
+          type: integer
+          format: int64
+        project:
+          type: string
+        summary:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        data:
+          type: object
+          nullable: true
+
+    # --- Graph ---
+    GraphResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+        edges:
+          type: array
+          items:
+            type: object
+
+    Observation:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        session_id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        tool_name:
+          type: string
+        project:
+          type: string
+        scope:
+          type: string
+        topic_key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # --- Traces ---
+    AddToolCallRequest:
+      type: object
+      required: [session_id, agent, tool_name]
+      properties:
+        session_id:
+          type: string
+          example: "session-abc123"
+        project:
+          type: string
+        agent:
+          type: string
+          example: "claude-opus"
+        tool_name:
+          type: string
+          example: "Read"
+        input_json:
+          type: object
+          description: Raw JSON input to the tool
+        output_text:
+          type: string
+          description: Tool output (truncated at 50KB server-side)
+        duration_ms:
+          type: integer
+          nullable: true
+        tokens_in:
+          type: integer
+          nullable: true
+        tokens_out:
+          type: integer
+          nullable: true
+        model:
+          type: string
+        cost_usd:
+          type: number
+          format: double
+          nullable: true
+        is_engram:
+          type: boolean
+          default: false
+
+    AddToolCallResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        occurred_at:
+          type: string
+          format: date-time
+
+    ToolCall:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: string
+        session_id:
+          type: string
+        project:
+          type: string
+          nullable: true
+        agent:
+          type: string
+        tool_name:
+          type: string
+        input_json:
+          type: string
+          nullable: true
+        output_text:
+          type: string
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        tokens_in:
+          type: integer
+          nullable: true
+        tokens_out:
+          type: integer
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        cost_usd:
+          type: string
+          nullable: true
+        is_engram:
+          type: boolean
+        occurred_at:
+          type: string
+          format: date-time
+
+    SessionToolCallsResult:
+      type: object
+      properties:
+        session_id:
+          type: string
+        tool_calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolCall'
+        total:
+          type: integer
+
+    ToolCallStatsResult:
+      type: object
+      properties:
+        total_calls:
+          type: integer
+        unique_tools:
+          type: integer
+        total_duration_ms:
+          type: integer
+          format: int64
+        by_tool:
+          type: array
+          items:
+            type: object
+            properties:
+              tool_name:
+                type: string
+              count:
+                type: integer
+              avg_duration_ms:
+                type: integer
+        by_session:
+          type: array
+          items:
+            type: object
+            properties:
+              session_id:
+                type: string
+              project:
+                type: string
+              count:
+                type: integer
+        by_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+
+    # --- Costs ---
+    ModelCost:
+      type: object
+      properties:
+        model:
+          type: string
+        input_tokens:
+          type: integer
+          format: int64
+        output_tokens:
+          type: integer
+          format: int64
+        cost:
+          type: number
+          format: double
+        calls:
+          type: integer
+
+    DayCost:
+      type: object
+      properties:
+        date:
+          type: string
+          example: "2026-04-01"
+        cost_usd:
+          type: number
+          format: double
+        calls:
+          type: integer
+
+    BudgetReport:
+      type: object
+      properties:
+        claude_used:
+          type: number
+          format: double
+        claude_budget:
+          type: number
+          format: double
+        openai_used:
+          type: number
+          format: double
+        openai_budget:
+          type: number
+          format: double
+        claude_pct:
+          type: number
+          format: double
+        openai_pct:
+          type: number
+          format: double
+        budget_projection:
+          type: number
+          format: double
+
+    CostSummary:
+      type: object
+      properties:
+        total_cost:
+          type: number
+          format: double
+        period:
+          type: string
+          enum: [day, week, month]
+        by_model:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelCost'
+        by_day:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayCost'
+        budget:
+          $ref: '#/components/schemas/BudgetReport'
+
+    SessionCost:
+      type: object
+      properties:
+        session_id:
+          type: string
+        project:
+          type: string
+        model:
+          type: string
+        input_tokens:
+          type: integer
+          format: int64
+        output_tokens:
+          type: integer
+          format: int64
+        cost:
+          type: number
+          format: double
+        calls:
+          type: integer
+        first_call:
+          type: string
+          format: date-time
+        last_call:
+          type: string
+          format: date-time
+
+    BudgetResponse:
+      type: object
+      properties:
+        monthly_budget_usd:
+          type: number
+          format: double
+        spent_this_month:
+          type: number
+          format: double
+        remaining:
+          type: number
+          format: double
+        percent_used:
+          type: number
+          format: double
+        projected_monthly:
+          type: number
+          format: double
+
+    # --- Metrics ---
+    RecordMetricRequest:
+      type: object
+      properties:
+        cpu_pct:
+          type: number
+          format: float
+        mem_pct:
+          type: number
+          format: float
+        disk_pct:
+          type: number
+          format: float
+        load_1m:
+          type: number
+          format: float
+        mem_used_mb:
+          type: integer
+        mem_total_mb:
+          type: integer
+
+    SystemInfo:
+      type: object
+      properties:
+        go_routines:
+          type: integer
+        go_mem_mb:
+          type: integer
+        uptime:
+          type: number
+          format: double
+          description: Seconds since server start
+        hostname:
+          type: string
+        cores:
+          type: integer
+
+    # --- Notifications ---
+    NotificationRequest:
+      type: object
+      required: [title, message]
+      properties:
+        type:
+          type: string
+          enum: [task_complete, input_needed, alert, info]
+          default: info
+        title:
+          type: string
+          example: "Task completed"
+        message:
+          type: string
+          example: "Auth module implementation is done."
+
+    # --- Jobs ---
+    CreateJobRequest:
+      type: object
+      required: [task]
+      properties:
+        task:
+          type: string
+          example: "Run security audit on auth module"
+        project:
+          type: string
+        working_dir:
+          type: string
+        context:
+          type: string
+
+    # --- SSE Event ---
+    SSEEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [task_update, activity]
+        data:
+          type: object
+
+paths:
+  # ===== Health =====
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Returns service status and database connectivity.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: mnemo-cloud
+                  version:
+                    type: string
+                    example: "0.1.0"
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: degraded
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  database:
+                    type: string
+                    example: unavailable
+
+  # ===== Auth =====
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Missing fields or weak password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (5 attempts/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with username/email and password
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (10 attempts/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '400':
+          description: Missing refresh_token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/api-key:
+    post:
+      tags: [Auth]
+      summary: Generate a new API key
+      description: Creates a new API key (eng_...). Previous key is overwritten. Store the returned key securely.
+      operationId: generateApiKey
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: API key generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Auth]
+      summary: Revoke current API key
+      operationId: revokeApiKey
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: revoked
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Chat =====
+  /api/chat:
+    post:
+      tags: [Chat]
+      summary: Send a chat message (SSE streaming response)
+      description: |
+        Accepts a message and streams the response via Server-Sent Events.
+        Each SSE event is `data: {...}\n\n`. Token events contain `{"token":"..."}`.
+        The final event contains `{"done":true}`.
+        Error events contain `{"error":"..."}`.
+      operationId: chatSSE
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: SSE stream of tokens
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE stream. Each line: `data: {"token":"..."}\n\n`
+                  Final: `data: {"done":true}\n\n`
+        '400':
+          description: Missing conversation_id or message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Chat orchestrator not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Conversations =====
+  /api/conversations:
+    post:
+      tags: [Conversations]
+      summary: Create a new conversation
+      operationId: createConversation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Conversations]
+      summary: List conversations
+      operationId: listConversations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/conversations/{id}:
+    patch:
+      tags: [Conversations]
+      summary: Rename a conversation
+      operationId: renameConversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameConversationRequest'
+      responses:
+        '200':
+          description: Conversation renamed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: renamed
+        '400':
+          description: Invalid ID or missing title
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Conversations]
+      summary: Delete a conversation
+      operationId: deleteConversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+        '400':
+          description: Invalid conversation ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/conversations/{id}/messages:
+    get:
+      tags: [Conversations]
+      summary: Get messages for a conversation
+      operationId: getConversationMessages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid conversation ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Tasks =====
+  /api/tasks:
+    post:
+      tags: [Tasks]
+      summary: Create a new task
+      operationId: createTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Missing title or invalid JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Tasks]
+      summary: List tasks with filters
+      operationId: listTasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, done, blocked, cancelled]
+        - name: assignee
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated task list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: integer
+
+  /api/tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get a task by ID (includes subtasks)
+      operationId: getTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Task with subtasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    $ref: '#/components/schemas/Task'
+                  subtasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Tasks]
+      summary: Update a task
+      description: |
+        Updates task fields. Status transitions are validated:
+        - open -> in_progress, blocked, cancelled
+        - in_progress -> done, blocked, cancelled
+        - blocked -> open, cancelled
+        - done and cancelled are terminal
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{id}/children:
+    post:
+      tags: [Tasks]
+      summary: Create a subtask under a parent task
+      operationId: createSubtask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Parent task ID
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Subtask created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Missing title
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Parent task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Activity =====
+  /api/activity:
+    get:
+      tags: [Activity]
+      summary: Unified activity feed
+      description: |
+        Returns recent activity across tool calls, observations, sessions,
+        and task events. Ordered by occurred_at DESC.
+      operationId: getActivity
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Activity entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityEntry'
+
+  # ===== Events (SSE) =====
+  /api/events:
+    get:
+      tags: [Events]
+      summary: Real-time SSE event stream
+      description: |
+        Server-Sent Events stream for real-time updates. Listens to PostgreSQL
+        NOTIFY channels (jarvis_tasks, jarvis_activity). Sends keepalive every 30s.
+        Requires Postgres DSN to be configured server-side.
+      operationId: getEvents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          description: Filter events by project name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE events: `data: {"type":"task_update","data":{...}}\n\n`
+                  Keepalive: `: keepalive\n\n`
+        '503':
+          description: SSE not configured (missing DSN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Knowledge Graph =====
+  /api/graph:
+    get:
+      tags: [Graph]
+      summary: Get knowledge graph
+      operationId: getGraph
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: max_nodes
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Knowledge graph with nodes and edges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphResponse'
+
+  /api/observations/{id}:
+    get:
+      tags: [Graph]
+      summary: Get a single observation by ID
+      operationId: getObservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Observation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Observation'
+        '400':
+          description: Invalid observation ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Observation not found
+
+  /api/sessions/{id}/observations:
+    get:
+      tags: [Graph]
+      summary: Get observations for a session
+      operationId: getSessionObservations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Session ID (string)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Session observations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  observations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Observation'
+                  total:
+                    type: integer
+
+  # ===== Traces =====
+  /traces/tool-call:
+    post:
+      tags: [Traces]
+      summary: Record a tool call trace
+      description: Inserts a new agent tool call trace. Output is truncated at 50KB server-side.
+      operationId: addToolCall
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToolCallRequest'
+      responses:
+        '201':
+          description: Tool call recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddToolCallResult'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /traces/session/{id}:
+    get:
+      tags: [Traces]
+      summary: Get tool call traces for a session
+      operationId: getSessionTraces
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Session ID
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Session tool calls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionToolCallsResult'
+
+  /traces/stats:
+    get:
+      tags: [Traces]
+      summary: Get aggregate tool call statistics
+      operationId: getTraceStats
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Tool call statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolCallStatsResult'
+
+  # ===== Costs =====
+  /api/costs:
+    get:
+      tags: [Costs]
+      summary: Get aggregated cost data
+      description: |
+        Returns cost breakdown by model, by day, and budget status.
+        Supports period-based or explicit date range filtering.
+      operationId: getCosts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+        - name: since
+          in: query
+          description: RFC3339 date override
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: RFC3339 date override
+          schema:
+            type: string
+            format: date-time
+        - name: claude_budget
+          in: query
+          description: Monthly Claude budget in USD
+          schema:
+            type: integer
+            default: 200
+        - name: openai_budget
+          in: query
+          description: Monthly OpenAI budget in USD
+          schema:
+            type: integer
+            default: 200
+      responses:
+        '200':
+          description: Cost summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummary'
+
+  /api/costs/sessions:
+    get:
+      tags: [Costs]
+      summary: Get per-session cost breakdown
+      operationId: getCostSessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Session costs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionCost'
+                  period:
+                    type: string
+
+  /api/costs/budget:
+    get:
+      tags: [Costs]
+      summary: Get budget status with monthly projection
+      operationId: getCostBudget
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: claude_budget
+          in: query
+          description: Monthly Claude budget in USD
+          schema:
+            type: integer
+            default: 200
+        - name: openai_budget
+          in: query
+          description: Monthly OpenAI budget in USD
+          schema:
+            type: integer
+            default: 200
+      responses:
+        '200':
+          description: Budget status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetResponse'
+
+  # ===== System =====
+  /api/system-info:
+    get:
+      tags: [System]
+      summary: Get live system information
+      description: Returns Go runtime stats, uptime, hostname, and CPU core count.
+      operationId: getSystemInfo
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: System info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfo'
+
+  /api/metrics:
+    post:
+      tags: [System]
+      summary: Record a system metrics snapshot
+      operationId: recordMetric
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordMetricRequest'
+      responses:
+        '201':
+          description: Metric recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+    get:
+      tags: [System]
+      summary: Get recent metrics snapshots
+      operationId: getMetrics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 60
+      responses:
+        '200':
+          description: Recent metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: array
+                    items:
+                      type: object
+
+  # ===== Notifications =====
+  /api/notifications:
+    post:
+      tags: [Notifications]
+      summary: Send a notification
+      description: Sends a notification via the configured notifier (e.g. Discord DM).
+      operationId: sendNotification
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '200':
+          description: Notification sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: sent
+        '400':
+          description: Missing title or message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Failed to send notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Notifications not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Jobs =====
+  /api/jobs:
+    get:
+      tags: [Jobs]
+      summary: List all delegation jobs
+      operationId: listJobs
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Jobs list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '503':
+          description: Jobs service not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Jobs]
+      summary: Create a new async delegation job
+      operationId: createJob
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  status:
+                    type: string
+                    example: pending
+                  message:
+                    type: string
+        '400':
+          description: Missing task field
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Jobs service not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: Get a job by ID
+      operationId: getJob
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    type: object
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Jobs service not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Sync =====
+  /sync/push:
+    post:
+      tags: [Sync]
+      summary: Push a sync chunk
+      description: |
+        Receives a sync chunk with sessions, observations, and prompts.
+        Idempotent via chunk_id (ON CONFLICT DO NOTHING). Body limit: 50 MB.
+      operationId: syncPush
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chunk_id, data]
+              properties:
+                chunk_id:
+                  type: string
+                  pattern: '^[0-9a-fA-F]{8}$'
+                  example: "a1b2c3d4"
+                created_by:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    sessions:
+                      type: array
+                      items:
+                        type: object
+                    observations:
+                      type: array
+                      items:
+                        type: object
+                    prompts:
+                      type: array
+                      items:
+                        type: object
+      responses:
+        '200':
+          description: Chunk accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: accepted
+                  chunk_id:
+                    type: string
+                  sessions_stored:
+                    type: integer
+                  observations_stored:
+                    type: integer
+                  prompts_stored:
+                    type: integer
+        '409':
+          description: Project sync paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large (max 50MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sync/pull:
+    get:
+      tags: [Sync]
+      summary: Get chunk manifest
+      operationId: syncPullManifest
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Chunk manifest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: integer
+                    example: 1
+                  chunks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        created_by:
+                          type: string
+                        created_at:
+                          type: string
+                        sessions:
+                          type: integer
+                        memories:
+                          type: integer
+                        prompts:
+                          type: integer
+
+  /sync/pull/{chunk_id}:
+    get:
+      tags: [Sync]
+      summary: Pull a specific chunk by ID
+      operationId: syncPullChunk
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Raw chunk data
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Chunk not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sync/mutations/push:
+    post:
+      tags: [Sync]
+      summary: Push a batch of mutations
+      description: |
+        Appends mutations to the cloud ledger. Best-effort materialization
+        into relational tables. Body limit: 10 MB.
+      operationId: syncMutationsPush
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mutations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      entity:
+                        type: string
+                      entity_key:
+                        type: string
+                      op:
+                        type: string
+                        enum: [upsert, delete]
+                      payload:
+                        type: object
+      responses:
+        '200':
+          description: Mutations accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer
+                  last_seq:
+                    type: integer
+                    format: int64
+        '409':
+          description: Project sync paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Request body too large (max 10MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sync/mutations/pull:
+    get:
+      tags: [Sync]
+      summary: Pull mutations since a sequence number
+      operationId: syncMutationsPull
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: since_seq
+          in: query
+          schema:
+            type: integer
+            format: int64
+            default: 0
+        - name: limit
+          in: query
+          description: Max mutations to return (max 1000)
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Mutations since sequence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mutations:
+                    type: array
+                    items:
+                      type: object
+                  has_more:
+                    type: boolean
+
+  /sync/search:
+    get:
+      tags: [Sync]
+      summary: Search observations
+      operationId: syncSearch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: scope
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Missing q parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sync/context:
+    get:
+      tags: [Sync]
+      summary: Get formatted context
+      operationId: syncContext
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: project
+          in: query
+          schema:
+            type: string
+        - name: scope
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Formatted context string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  context:
+                    type: string
