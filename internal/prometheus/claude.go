@@ -39,6 +39,7 @@ type ChatRequest struct {
 	Tools          []ChatToolDef       `json:"tools,omitempty"`
 	Model          string              `json:"model"`
 	MaxTokens      int                 `json:"max_tokens"`
+	MaxTurns       int                 `json:"max_turns,omitempty"` // max agent turns for bridge (0 = bridge default)
 	tokenRefreshed bool                // internal: prevent infinite refresh loop
 }
 
@@ -266,6 +267,7 @@ func (c *ClaudeClient) getToken() (string, error) {
 type apiRequest struct {
 	Model     string          `json:"model"`
 	MaxTokens int             `json:"max_tokens"`
+	MaxTurns  int             `json:"maxTurns,omitempty"` // bridge field: max agent turns
 	System    []apiTextBlock  `json:"system,omitempty"`
 	Messages  []ChatMessage   `json:"messages"`
 	Tools     []ChatToolDef   `json:"tools,omitempty"`
@@ -317,6 +319,7 @@ func (c *ClaudeClient) Send(ctx context.Context, req ChatRequest) (*ChatResponse
 	apiReq := apiRequest{
 		Model:     model,
 		MaxTokens: maxTokens,
+		MaxTurns:  req.MaxTurns,
 		Messages:  req.Messages,
 		Tools:     req.Tools,
 	}

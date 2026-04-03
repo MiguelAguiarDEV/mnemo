@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
@@ -1228,9 +1229,80 @@ func cmdCloudServe() {
 		}, nil
 	}
 	// Streaming handler passes onToken callback to orchestrator.
+	// For Discord: quick-first pattern (fast answer, then background if complex).
+	// For other channels (web): full streaming Chat with onToken callback.
 	gwStreamingHandler := func(gwCtx context.Context, msg gateway.IncomingMessage, onToken func(string)) (gateway.OutgoingMessage, error) {
 		convIDStr := msg.Metadata["conversation_id"]
 		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
+
+		// ── Discord: quick-first pattern ──
+		if msg.ChannelName == "discord" {
+			quick, quickErr := orch.ChatQuick(msg.SenderID, convID, msg.Text)
+			if quickErr != nil {
+				return gateway.OutgoingMessage{}, quickErr
+			}
+
+			if !quick.NeedsMore {
+				// Simple answer — return directly, let progress reporter finalize.
+				onToken(quick.Text)
+				return gateway.OutgoingMessage{
+					ChannelName: msg.ChannelName,
+					RecipientID: msg.SenderID,
+					Text:        quick.Text,
+					Format:      gateway.FormatMarkdown,
+					ReplyTo:     msg.ReplyTo,
+					Skip:        true,
+				}, nil
+			}
+
+			// Complex task — send quick response as progress, then launch background.
+			onToken(quick.Text + "\n\n⏳ Trabajando en ello...")
+			log.Printf("[mnemo-cloud] ChatQuick needs_more=true, launching ChatLong for conv %d", convID)
+
+			go func() {
+				bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+				defer cancel()
+
+				result, bgErr := orch.ChatLong(bgCtx, msg.SenderID, convID, msg.Text, nil)
+				if bgErr != nil {
+					log.Printf("[mnemo-cloud] ChatLong error for conv %d: %v", convID, bgErr)
+					// Notify via Discord DM if notifier is available.
+					if orch.Notifier() != nil {
+						_ = orch.Notifier().Send(notifications.Notification{
+							Type:    notifications.Alert,
+							Title:   "JARVIS background task failed",
+							Message: fmt.Sprintf("Error: %v", bgErr),
+						})
+					}
+					return
+				}
+
+				// Send completed result via Discord DM.
+				if orch.Notifier() != nil {
+					output := result
+					if len(output) > 1800 {
+						output = output[:1800] + "\n... (truncado)"
+					}
+					_ = orch.Notifier().Send(notifications.Notification{
+						Type:    notifications.TaskComplete,
+						Title:   "JARVIS completó la tarea",
+						Message: output,
+					})
+				}
+				log.Printf("[mnemo-cloud] ChatLong completed for conv %d, result_len=%d", convID, len(result))
+			}()
+
+			return gateway.OutgoingMessage{
+				ChannelName: msg.ChannelName,
+				RecipientID: msg.SenderID,
+				Text:        quick.Text + "\n\n⏳ Trabajando en ello...",
+				Format:      gateway.FormatMarkdown,
+				ReplyTo:     msg.ReplyTo,
+				Skip:        true,
+			}, nil
+		}
+
+		// ── Web / other channels: full streaming Chat ──
 		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, onToken)
 		if chatErr != nil {
 			return gateway.OutgoingMessage{}, chatErr

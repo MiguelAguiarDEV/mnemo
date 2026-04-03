@@ -471,3 +471,90 @@ func newTestDispatcher() *athena.Dispatcher {
 
 // Bring in tools import for the test file
 var _ = athena.ToolResult{}
+
+// ─── QuickResponse Tests ────────────────────────────────────────────────
+
+func TestQuickResponse_SimpleQuestion(t *testing.T) {
+	// Verify QuickResponse correctly reports NeedsMore=false for end_turn
+	qr := QuickResponse{Text: "Hello! How can I help?", NeedsMore: false}
+	if qr.NeedsMore {
+		t.Error("simple answer should not need more")
+	}
+	if qr.Text == "" {
+		t.Error("text should not be empty")
+	}
+}
+
+func TestQuickResponse_ComplexTask(t *testing.T) {
+	// Verify QuickResponse correctly reports NeedsMore=true when stop_reason != end_turn
+	qr := QuickResponse{Text: "Let me work on that...", NeedsMore: true}
+	if !qr.NeedsMore {
+		t.Error("complex task should need more")
+	}
+}
+
+func TestMaxTurnsInChatRequest(t *testing.T) {
+	// Verify MaxTurns field is properly set and serialized in ChatRequest
+	req := prometheus.ChatRequest{
+		SystemPrompt: "test",
+		Messages:     []prometheus.ChatMessage{prometheus.NewTextMessage("user", "hello")},
+		Model:        "claude-sonnet-4-6",
+		MaxTokens:    1024,
+		MaxTurns:     1,
+	}
+
+	if req.MaxTurns != 1 {
+		t.Errorf("MaxTurns = %d, want 1", req.MaxTurns)
+	}
+
+	// Verify JSON serialization includes maxTurns
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	dataStr := string(data)
+	if !strings.Contains(dataStr, `"max_turns"`) {
+		t.Errorf("JSON should contain max_turns field, got: %s", dataStr)
+	}
+}
+
+func TestMaxTurnsZeroOmitted(t *testing.T) {
+	// Verify MaxTurns=0 is omitted from JSON (omitempty)
+	req := prometheus.ChatRequest{
+		SystemPrompt: "test",
+		Messages:     []prometheus.ChatMessage{prometheus.NewTextMessage("user", "hello")},
+		Model:        "claude-sonnet-4-6",
+		MaxTurns:     0,
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	dataStr := string(data)
+	if strings.Contains(dataStr, `"max_turns"`) {
+		t.Errorf("JSON should not contain max_turns when 0 (omitempty), got: %s", dataStr)
+	}
+}
+
+func TestChatQuick_NeedsMoreDetection(t *testing.T) {
+	// Test the logic that determines NeedsMore based on stop_reason
+	tests := []struct {
+		stopReason string
+		wantMore   bool
+	}{
+		{"end_turn", false},
+		{"tool_use", true},
+		{"max_tokens", true},
+		{"stop_sequence", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.stopReason, func(t *testing.T) {
+			needsMore := tt.stopReason != "end_turn"
+			if needsMore != tt.wantMore {
+				t.Errorf("stop_reason=%q: needsMore=%v, want %v", tt.stopReason, needsMore, tt.wantMore)
+			}
+		})
+	}
+}

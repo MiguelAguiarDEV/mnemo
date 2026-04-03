@@ -224,6 +224,11 @@ func (o *Orchestrator) Worker() prometheus.WorkerExecutor {
 	return o.worker
 }
 
+// Notifier returns the orchestrator's notifier (for Discord DMs, etc.).
+func (o *Orchestrator) Notifier() notifications.Notifier {
+	return o.notifier
+}
+
 // initSkillsV2 initializes the registry, loader, dispatcher, and registers all tools.
 func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	slog.Info("initializing skills architecture")
@@ -841,6 +846,232 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 	}
 
 	return "", fmt.Errorf("jarvis: tool-call loop exhausted without final response")
+}
+
+// ─── Quick / Long Chat Modes ──────────────────────────────────────────────
+
+// QuickResponse holds a quick-mode response with metadata about whether background work is needed.
+type QuickResponse struct {
+	Text      string // response text from the single turn
+	NeedsMore bool   // true if Claude's stop_reason != "end_turn" (i.e., it wanted to use tools / continue)
+}
+
+// ChatQuick sends a message with maxTurns=1 for fast responses.
+// It returns immediately after the first Claude turn. If NeedsMore is true,
+// the caller should launch ChatLong in a goroutine for the full autonomous run.
+func (o *Orchestrator) ChatQuick(userID string, conversationID int64, message string) (QuickResponse, error) {
+	// 1. Persist the user message.
+	_, err := o.store.AddMessage(conversationID, "user", message, "", nil, nil, nil)
+	if err != nil {
+		return QuickResponse{}, fmt.Errorf("jarvis: save user message: %w", err)
+	}
+
+	// 2. Load conversation history.
+	history, err := o.store.GetMessages(conversationID, 50)
+	if err != nil {
+		slog.Warn("failed to load history", "err", err)
+		history = nil
+	}
+
+	// 3. Budget check and model selection.
+	budgetPct := 0.0
+	if o.store != nil {
+		report, bErr := o.store.BudgetUsage(userID, time.Now(), o.budgetClaude, o.budgetOpenAI)
+		if bErr != nil {
+			slog.Warn("budget check failed", "err", bErr)
+		} else if report != nil {
+			budgetPct = report.ClaudePct / 100.0
+		}
+	}
+
+	complexity := ClassifyComplexity(message)
+	model := SelectModel(complexity, budgetPct)
+
+	// 4. Build system prompt and messages (same as chatV2).
+	cleanedMessage, preloadSkills := extractSkillOverrides(message, o.registry)
+	systemPrompt := o.buildSystemPromptV2(preloadSkills)
+	messages := o.buildChatMessages(history, cleanedMessage)
+
+	// 5. Single-turn call with MaxTurns=1 — no tool loop.
+	resp, err := o.claudeClient.Send(context.Background(), prometheus.ChatRequest{
+		SystemPrompt: systemPrompt,
+		Messages:     messages,
+		Model:        model.Model,
+		MaxTokens:    model.MaxTokens,
+		MaxTurns:     1,
+	})
+	if err != nil {
+		return QuickResponse{}, fmt.Errorf("jarvis: quick chat: %w", err)
+	}
+
+	text := resp.TextContent()
+
+	// Persist the response.
+	cost := (float64(resp.Usage.InputTokens) / 1000.0 * model.CostPer1KIn) +
+		(float64(resp.Usage.OutputTokens) / 1000.0 * model.CostPer1KOut)
+	inTok := resp.Usage.InputTokens
+	outTok := resp.Usage.OutputTokens
+	o.store.AddMessage(conversationID, "assistant", text, resp.Model, &inTok, &outTok, &cost)
+
+	needsMore := resp.StopReason != "end_turn"
+
+	slog.Info("ChatQuick completed",
+		"model", resp.Model,
+		"stop_reason", resp.StopReason,
+		"needs_more", needsMore,
+		"text_len", len(text),
+	)
+
+	return QuickResponse{Text: text, NeedsMore: needsMore}, nil
+}
+
+// ChatLong sends a message with maxTurns=50 for autonomous work.
+// Designed to run in a goroutine — uses the provided context for cancellation.
+// The onToken callback is called with text chunks as they arrive.
+func (o *Orchestrator) ChatLong(ctx context.Context, userID string, conversationID int64, message string, onToken func(string)) (string, error) {
+	// NOTE: ChatQuick already persisted the user message and one assistant response.
+	// ChatLong continues the conversation from where Quick left off.
+
+	// 1. Load conversation history (includes the quick response).
+	history, err := o.store.GetMessages(conversationID, 50)
+	if err != nil {
+		slog.Warn("failed to load history for long chat", "err", err)
+		history = nil
+	}
+
+	// 2. Budget check and model selection.
+	budgetPct := 0.0
+	if o.store != nil {
+		report, bErr := o.store.BudgetUsage(userID, time.Now(), o.budgetClaude, o.budgetOpenAI)
+		if bErr != nil {
+			slog.Warn("budget check failed", "err", bErr)
+		} else if report != nil {
+			budgetPct = report.ClaudePct / 100.0
+		}
+	}
+
+	complexity := ClassifyComplexity(message)
+	model := SelectModel(complexity, budgetPct)
+
+	// 3. Build system prompt and messages.
+	cleanedMessage, preloadSkills := extractSkillOverrides(message, o.registry)
+	systemPrompt := o.buildSystemPromptV2(preloadSkills)
+
+	// Use a continuation prompt so Claude knows it should now fully complete the task.
+	continuationMsg := "Continue with the task. You now have full autonomy — use all tools needed to complete: " + cleanedMessage
+	messages := o.buildChatMessages(history, continuationMsg)
+
+	// 4. Convert tool definitions for native tool dispatch.
+	athenaDefs := o.dispatcher.ToolDefinitions()
+	toolDefs := make([]prometheus.ChatToolDef, len(athenaDefs))
+	for i, d := range athenaDefs {
+		toolDefs[i] = prometheus.NewChatToolDef(d.Name, d.Description, d.Parameters)
+	}
+
+	// Bind tracing to this conversation.
+	o.tracingDispatcher.SetSessionID(fmt.Sprintf("conv-%d-long", conversationID))
+
+	slog.Info("ChatLong starting",
+		"model", model.Model,
+		"messages", len(messages),
+		"tools", len(toolDefs),
+	)
+
+	// 5. Extended tool-call loop (50 iterations for autonomous work).
+	const maxIterations = 50
+	var totalInputTokens, totalOutputTokens int
+	var lastText string
+
+	for i := 0; i < maxIterations; i++ {
+		// Check context cancellation.
+		if ctx.Err() != nil {
+			return lastText, fmt.Errorf("jarvis: long chat cancelled: %w", ctx.Err())
+		}
+
+		resp, err := o.claudeClient.Send(ctx, prometheus.ChatRequest{
+			SystemPrompt: systemPrompt,
+			Messages:     messages,
+			Model:        model.Model,
+			MaxTokens:    model.MaxTokens,
+			MaxTurns:     50,
+		})
+		if err != nil {
+			return lastText, fmt.Errorf("jarvis: claude API (long iteration %d): %w", i, err)
+		}
+
+		totalInputTokens += resp.Usage.InputTokens
+		totalOutputTokens += resp.Usage.OutputTokens
+
+		textContent := resp.TextContent()
+		if textContent != "" {
+			lastText = textContent
+			if onToken != nil {
+				onToken(textContent)
+			}
+		}
+
+		// If done, persist and return.
+		if resp.StopReason != "tool_use" {
+			modelName := resp.Model
+			if modelName == "" {
+				modelName = model.Model
+			}
+			cost := (float64(totalInputTokens) / 1000.0 * model.CostPer1KIn) +
+				(float64(totalOutputTokens) / 1000.0 * model.CostPer1KOut)
+			o.store.AddMessage(conversationID, "assistant", lastText, modelName, &totalInputTokens, &totalOutputTokens, &cost)
+
+			slog.Info("ChatLong completed",
+				"iterations", i+1,
+				"total_input_tokens", totalInputTokens,
+				"total_output_tokens", totalOutputTokens,
+			)
+			return lastText, nil
+		}
+
+		// Tool dispatch (same as chatV2).
+		toolBlocks := resp.ToolUseBlocks()
+		slog.Info("ChatLong tool_use",
+			"count", len(toolBlocks),
+			"iteration", i+1,
+		)
+
+		messages = append(messages, prometheus.NewBlocksMessage("assistant", resp.Content))
+
+		var toolResultBlocks []prometheus.ContentBlock
+		for _, tb := range toolBlocks {
+			slog.Info("dispatching tool (long)", "name", tb.Name, "id", tb.ID)
+
+			result, tErr := o.tracingDispatcher.Dispatch(ctx, tb.Name, tb.Input)
+			isError := false
+			content := ""
+			if tErr != nil {
+				isError = true
+				content = "tool error: " + tErr.Error()
+			} else if result.IsError {
+				isError = true
+				content = result.Content
+			} else {
+				content = result.Content
+			}
+
+			toolResultBlocks = append(toolResultBlocks, prometheus.ContentBlock{
+				Type:      "tool_result",
+				ToolUseID: tb.ID,
+				Content:   content,
+				IsError:   isError,
+			})
+		}
+
+		toolResultContent, _ := json.Marshal(toolResultBlocks)
+		messages = append(messages, prometheus.ChatMessage{
+			Role:    "user",
+			Content: toolResultContent,
+		})
+	}
+
+	// Max iterations reached.
+	slog.Warn("ChatLong reached max iterations", "max", maxIterations)
+	return lastText, nil
 }
 
 // ─── /skill-name Interception ─────────────────────────────────────────────
