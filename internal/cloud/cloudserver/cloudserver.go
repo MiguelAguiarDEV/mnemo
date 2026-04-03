@@ -17,6 +17,7 @@ import (
 	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
 	"github.com/Gentleman-Programming/engram/internal/cloud/dashboard"
 	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
+	"github.com/Gentleman-Programming/engram/internal/gateway"
 )
 
 // ─── CloudServer ────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ type CloudServer struct {
 	limit    *authRateLimiter
 	dashCfg  dashboard.DashboardConfig
 	costQuerier CostQuerier // optional override for testing cost handlers
+	gw          *gateway.Gateway // multi-channel gateway (Phase 1: initialized but not wired to routes)
 }
 
 // New creates a new CloudServer and registers all routes.
@@ -102,6 +104,14 @@ func WithJobs(j JobService) Option {
 func WithNotifier(n notifications.Notifier) Option {
 	return func(s *CloudServer) {
 		s.notifier = n
+	}
+}
+
+// WithGateway sets the multi-channel gateway for message routing.
+// Phase 1: gateway is initialized but not wired to HTTP routes yet.
+func WithGateway(gw *gateway.Gateway) Option {
+	return func(s *CloudServer) {
+		s.gw = gw
 	}
 }
 
