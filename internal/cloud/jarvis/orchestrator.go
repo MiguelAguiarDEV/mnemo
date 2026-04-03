@@ -776,7 +776,17 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 		for _, tb := range toolBlocks {
 			slog.Info("dispatching tool", "name", tb.Name, "id", tb.ID)
 
+			// Emit tool_start status event.
+			toolStartJSON, _ := json.Marshal(map[string]any{
+				"event": "tool_start",
+				"tool":  tb.Name,
+			})
+			onToken("__STATUS__" + string(toolStartJSON))
+
+			toolStartTime := time.Now()
 			result, err := o.tracingDispatcher.Dispatch(context.Background(), tb.Name, tb.Input)
+			toolDuration := time.Since(toolStartTime).Milliseconds()
+
 			isError := false
 			content := ""
 			if err != nil {
@@ -791,6 +801,15 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 				content = result.Content
 				slog.Debug("tool result", "tool", tb.Name, "result_len", len(content))
 			}
+
+			// Emit tool_done status event.
+			toolDoneJSON, _ := json.Marshal(map[string]any{
+				"event":       "tool_done",
+				"tool":        tb.Name,
+				"duration_ms": toolDuration,
+				"is_error":    isError,
+			})
+			onToken("__STATUS__" + string(toolDoneJSON))
 
 			toolResultBlocks = append(toolResultBlocks, prometheus.ContentBlock{
 				Type:      "tool_result",

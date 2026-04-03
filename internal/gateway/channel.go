@@ -39,6 +39,7 @@ type OutgoingMessage struct {
 	Text        string        // response content (markdown)
 	Format      MessageFormat // how to render the text
 	ReplyTo     string        // thread/reply context
+	Skip        bool          // if true, skip sending (progressive mode handles delivery)
 }
 
 // MessageFormat controls how text is rendered per channel.

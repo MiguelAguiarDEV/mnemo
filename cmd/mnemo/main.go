@@ -1211,7 +1211,7 @@ func cmdCloudServe() {
 	orch.StartTicker(ctx)
 
 	// ── Gateway setup ──────────────────────────────────────────────────────
-	// Create Gateway with JARVIS orchestrator as handler.
+	// Create Gateway with JARVIS orchestrator as handler (non-streaming fallback).
 	gwHandler := func(gwCtx context.Context, msg gateway.IncomingMessage) (gateway.OutgoingMessage, error) {
 		convIDStr := msg.Metadata["conversation_id"]
 		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
@@ -1227,7 +1227,24 @@ func cmdCloudServe() {
 			ReplyTo:     msg.ReplyTo,
 		}, nil
 	}
-	gw := gateway.New(gwHandler)
+	// Streaming handler passes onToken callback to orchestrator.
+	gwStreamingHandler := func(gwCtx context.Context, msg gateway.IncomingMessage, onToken func(string)) (gateway.OutgoingMessage, error) {
+		convIDStr := msg.Metadata["conversation_id"]
+		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
+		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, onToken)
+		if chatErr != nil {
+			return gateway.OutgoingMessage{}, chatErr
+		}
+		return gateway.OutgoingMessage{
+			ChannelName: msg.ChannelName,
+			RecipientID: msg.SenderID,
+			Text:        resp,
+			Format:      gateway.FormatMarkdown,
+			ReplyTo:     msg.ReplyTo,
+			Skip:        true, // progressive mode handles delivery
+		}, nil
+	}
+	gw := gateway.New(gwHandler, gateway.WithStreamingHandler(gwStreamingHandler))
 
 	// Web channel (always enabled).
 	webCh := gateway.NewWebChannel(gw)

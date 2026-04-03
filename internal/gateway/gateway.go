@@ -10,14 +10,18 @@ import (
 // MessageHandler processes an incoming message and returns a response.
 type MessageHandler func(ctx context.Context, msg IncomingMessage) (OutgoingMessage, error)
 
+// StreamingMessageHandler processes an incoming message with a token callback for streaming.
+type StreamingMessageHandler func(ctx context.Context, msg IncomingMessage, onToken func(string)) (OutgoingMessage, error)
+
 // Gateway is the central message router that manages channels and dispatches
 // messages to the handler (orchestrator).
 type Gateway struct {
-	mu       sync.RWMutex
-	channels map[string]Channel
-	handler  MessageHandler
-	logger   *slog.Logger
-	started  bool
+	mu               sync.RWMutex
+	channels         map[string]Channel
+	handler          MessageHandler
+	streamingHandler StreamingMessageHandler
+	logger           *slog.Logger
+	started          bool
 }
 
 // New creates a new Gateway with the given message handler.
@@ -41,6 +45,13 @@ type GatewayOption func(*Gateway)
 func WithLogger(l *slog.Logger) GatewayOption {
 	return func(g *Gateway) {
 		g.logger = l
+	}
+}
+
+// WithStreamingHandler sets a streaming message handler for progressive responses.
+func WithStreamingHandler(h StreamingMessageHandler) GatewayOption {
+	return func(g *Gateway) {
+		g.streamingHandler = h
 	}
 }
 
@@ -159,6 +170,37 @@ func (g *Gateway) HandleMessage(ctx context.Context, msg IncomingMessage) (Outgo
 	}
 
 	g.logger.Info("message handled",
+		"channel", msg.ChannelName,
+		"sender", msg.SenderID,
+		"response_len", len(resp.Text),
+	)
+	return resp, nil
+}
+
+// HandleMessageStreaming processes a message with a token callback for streaming.
+// Falls back to HandleMessage if no streaming handler is configured.
+func (g *Gateway) HandleMessageStreaming(ctx context.Context, msg IncomingMessage, onToken func(string)) (OutgoingMessage, error) {
+	if g.streamingHandler == nil {
+		return g.HandleMessage(ctx, msg)
+	}
+
+	g.logger.Info("routing message (streaming)",
+		"channel", msg.ChannelName,
+		"sender", msg.SenderID,
+		"text_len", len(msg.Text),
+	)
+
+	resp, err := g.streamingHandler(ctx, msg, onToken)
+	if err != nil {
+		g.logger.Error("streaming handler failed",
+			"channel", msg.ChannelName,
+			"sender", msg.SenderID,
+			"error", err,
+		)
+		return OutgoingMessage{}, fmt.Errorf("gateway: streaming handler: %w", err)
+	}
+
+	g.logger.Info("message handled (streaming)",
 		"channel", msg.ChannelName,
 		"sender", msg.SenderID,
 		"response_len", len(resp.Text),

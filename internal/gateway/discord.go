@@ -204,6 +204,44 @@ func (dc *DiscordChannel) Send(ctx context.Context, msg OutgoingMessage) error {
 	return nil
 }
 
+// SendInitial sends a message and returns its ID for later editing.
+func (dc *DiscordChannel) SendInitial(ctx context.Context, channelID, text string) (string, error) {
+	dc.mu.RLock()
+	sess := dc.session
+	dc.mu.RUnlock()
+
+	if sess == nil {
+		return "", fmt.Errorf("discord: not connected")
+	}
+
+	msg, err := sess.ChannelMessageSend(channelID, text)
+	if err != nil {
+		dc.logger.Error("discord send initial failed", "channel_id", channelID, "error", err)
+		return "", fmt.Errorf("discord: send initial: %w", err)
+	}
+	dc.logger.Debug("discord initial message sent", "channel_id", channelID, "message_id", msg.ID)
+	return msg.ID, nil
+}
+
+// EditMessage edits an existing Discord message by ID.
+func (dc *DiscordChannel) EditMessage(ctx context.Context, channelID, messageID, text string) error {
+	dc.mu.RLock()
+	sess := dc.session
+	dc.mu.RUnlock()
+
+	if sess == nil {
+		return fmt.Errorf("discord: not connected")
+	}
+
+	_, err := sess.ChannelMessageEdit(channelID, messageID, text)
+	if err != nil {
+		dc.logger.Error("discord edit failed", "channel_id", channelID, "message_id", messageID, "error", err)
+		return fmt.Errorf("discord: edit message: %w", err)
+	}
+	dc.logger.Debug("discord message edited", "channel_id", channelID, "message_id", messageID)
+	return nil
+}
+
 // onMessageCreate handles incoming Discord messages (DMs and mentions).
 func (dc *DiscordChannel) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Guard: nil author or bot messages.
@@ -276,6 +314,7 @@ func (dc *DiscordChannel) onMessageCreate(s *discordgo.Session, m *discordgo.Mes
 }
 
 // processMessage routes a message through the Gateway and sends the response.
+// If the Gateway has a streaming handler, it uses progressive message editing.
 func (dc *DiscordChannel) processMessage(s *discordgo.Session, m *discordgo.MessageCreate, text string, metadata map[string]string) {
 	ctx := context.Background()
 
@@ -287,6 +326,13 @@ func (dc *DiscordChannel) processMessage(s *discordgo.Session, m *discordgo.Mess
 		Metadata:    metadata,
 	}
 
+	// Try progressive mode if streaming handler is available.
+	if dc.gateway.streamingHandler != nil {
+		dc.processMessageProgressive(ctx, incoming, m)
+		return
+	}
+
+	// Fallback: non-streaming mode.
 	resp, err := dc.gateway.HandleMessage(ctx, incoming)
 	if err != nil {
 		dc.logger.Error("discord message handling failed",
@@ -298,7 +344,6 @@ func (dc *DiscordChannel) processMessage(s *discordgo.Session, m *discordgo.Mess
 		return
 	}
 
-	// Send response back to the same channel.
 	outgoing := OutgoingMessage{
 		ChannelName: "discord",
 		RecipientID: m.ChannelID,
@@ -309,6 +354,42 @@ func (dc *DiscordChannel) processMessage(s *discordgo.Session, m *discordgo.Mess
 
 	if err := dc.Send(ctx, outgoing); err != nil {
 		dc.logger.Error("discord response send failed",
+			"user_id", m.Author.ID,
+			"channel_id", m.ChannelID,
+			"error", err,
+		)
+	}
+}
+
+// processMessageProgressive uses ProgressReporter for live message editing.
+func (dc *DiscordChannel) processMessageProgressive(ctx context.Context, incoming IncomingMessage, m *discordgo.MessageCreate) {
+	pr := NewProgressReporter(dc, m.ChannelID, dc.logger)
+
+	// Send initial "processing" message.
+	if err := pr.Start(ctx); err != nil {
+		dc.logger.Error("progress reporter start failed",
+			"channel_id", m.ChannelID,
+			"error", err,
+		)
+		_, _ = dc.session.ChannelMessageSend(m.ChannelID, "Something went wrong. Try again later.")
+		return
+	}
+
+	// Stream tokens through the progress reporter.
+	resp, err := dc.gateway.HandleMessageStreaming(ctx, incoming, pr.OnToken)
+	if err != nil {
+		dc.logger.Error("discord streaming message handling failed",
+			"user_id", m.Author.ID,
+			"channel_id", m.ChannelID,
+			"error", err,
+		)
+		_ = pr.Finalize(ctx, "Something went wrong. Try again later.")
+		return
+	}
+
+	// Finalize with the full response text.
+	if err := pr.Finalize(ctx, resp.Text); err != nil {
+		dc.logger.Error("progress reporter finalize failed",
 			"user_id", m.Author.ID,
 			"channel_id", m.ChannelID,
 			"error", err,
