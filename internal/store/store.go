@@ -26,6 +26,7 @@ var openDB = sql.Open
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+// Session represents a coding session tracked by Mnemo.
 type Session struct {
 	ID        string  `json:"id"`
 	Project   string  `json:"project"`
@@ -35,6 +36,7 @@ type Session struct {
 	Summary   *string `json:"summary,omitempty"`
 }
 
+// Observation is a single knowledge entry (decision, bugfix, discovery, etc.) stored by Mnemo.
 type Observation struct {
 	ID             int64   `json:"id"`
 	SyncID         string  `json:"sync_id"`
@@ -54,11 +56,13 @@ type Observation struct {
 	DeletedAt      *string `json:"deleted_at,omitempty"`
 }
 
+// SearchResult wraps an Observation with its FTS5 relevance rank.
 type SearchResult struct {
 	Observation
 	Rank float64 `json:"rank"`
 }
 
+// SessionSummary is a lightweight session view including its observation count.
 type SessionSummary struct {
 	ID               string  `json:"id"`
 	Project          string  `json:"project"`
@@ -68,6 +72,7 @@ type SessionSummary struct {
 	ObservationCount int     `json:"observation_count"`
 }
 
+// Stats holds aggregate counters for the Mnemo database.
 type Stats struct {
 	TotalSessions     int      `json:"total_sessions"`
 	TotalObservations int      `json:"total_observations"`
@@ -75,6 +80,7 @@ type Stats struct {
 	Projects          []string `json:"projects"`
 }
 
+// TimelineEntry is an observation rendered in a timeline context, with a focus flag.
 type TimelineEntry struct {
 	ID             int64   `json:"id"`
 	SessionID      string  `json:"session_id"`
@@ -94,6 +100,7 @@ type TimelineEntry struct {
 	IsFocus        bool    `json:"is_focus"` // true for the anchor observation
 }
 
+// TimelineResult holds the before/after context around a focus observation.
 type TimelineResult struct {
 	Focus        Observation     `json:"focus"`        // The anchor observation
 	Before       []TimelineEntry `json:"before"`       // Observations before the focus (chronological)
@@ -102,6 +109,7 @@ type TimelineResult struct {
 	TotalInRange int             `json:"total_in_range"`
 }
 
+// SearchOptions controls filtering and pagination for FTS5 search queries.
 type SearchOptions struct {
 	Type    string `json:"type,omitempty"`
 	Project string `json:"project,omitempty"`
@@ -109,6 +117,7 @@ type SearchOptions struct {
 	Limit   int    `json:"limit,omitempty"`
 }
 
+// AddObservationParams holds the required and optional fields for creating an observation.
 type AddObservationParams struct {
 	SessionID string `json:"session_id"`
 	Type      string `json:"type"`
@@ -120,6 +129,7 @@ type AddObservationParams struct {
 	TopicKey  string `json:"topic_key,omitempty"`
 }
 
+// UpdateObservationParams holds the optional fields for patching an observation.
 type UpdateObservationParams struct {
 	Type     *string `json:"type,omitempty"`
 	Title    *string `json:"title,omitempty"`
@@ -129,6 +139,7 @@ type UpdateObservationParams struct {
 	TopicKey *string `json:"topic_key,omitempty"`
 }
 
+// Prompt represents a captured system/user prompt from a coding session.
 type Prompt struct {
 	ID        int64  `json:"id"`
 	SyncID    string `json:"sync_id"`
@@ -138,6 +149,7 @@ type Prompt struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// AddPromptParams holds the fields for storing a new prompt.
 type AddPromptParams struct {
 	SessionID string `json:"session_id"`
 	Content   string `json:"content"`
@@ -164,6 +176,7 @@ const (
 	SyncSourceRemote = "remote"
 )
 
+// SyncState tracks the progress of cloud synchronisation for a target.
 type SyncState struct {
 	TargetKey           string  `json:"target_key"`
 	Lifecycle           string  `json:"lifecycle"`
@@ -178,6 +191,7 @@ type SyncState struct {
 	UpdatedAt           string  `json:"updated_at"`
 }
 
+// SyncMutation represents a single change (upsert/delete) queued for cloud sync.
 type SyncMutation struct {
 	Seq        int64   `json:"seq"`
 	TargetKey  string  `json:"target_key"`
@@ -238,6 +252,7 @@ type ExportData struct {
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
+// Config holds the settings for opening a Mnemo store.
 type Config struct {
 	DataDir              string
 	MaxObservationLength int
@@ -246,6 +261,7 @@ type Config struct {
 	DedupeWindow         time.Duration
 }
 
+// DefaultConfig returns a Config with sensible defaults, rooted at ~/.mnemo.
 func DefaultConfig() (Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -280,6 +296,7 @@ func (s *Store) MaxObservationLength() int {
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
+// Store is the Mnemo persistence layer backed by SQLite with FTS5 search.
 type Store struct {
 	db    *sql.DB
 	cfg   Config
@@ -392,6 +409,7 @@ func (s *Store) commitHook(tx *sql.Tx) error {
 	return tx.Commit()
 }
 
+// New opens (or creates) the SQLite database in cfg.DataDir and runs migrations.
 func New(cfg Config) (*Store, error) {
 	if !filepath.IsAbs(cfg.DataDir) {
 		return nil, fmt.Errorf("mnemo: data directory must be an absolute path, got %q — set MNEMO_DATA_DIR or ensure your home directory is resolvable", cfg.DataDir)
@@ -1677,6 +1695,7 @@ func (s *Store) Import(data *ExportData) (*ImportResult, error) {
 	return result, nil
 }
 
+// ImportResult reports how many entities were imported from an ExportData payload.
 type ImportResult struct {
 	SessionsImported     int `json:"sessions_imported"`
 	ObservationsImported int `json:"observations_imported"`

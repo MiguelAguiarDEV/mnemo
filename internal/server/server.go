@@ -36,6 +36,7 @@ type SyncStatus struct {
 	LastSyncAt          *time.Time `json:"last_sync_at,omitempty"`
 }
 
+// Server is the Mnemo HTTP server that exposes the memory engine over REST.
 type Server struct {
 	store      *store.Store
 	mux        *http.ServeMux
@@ -46,6 +47,7 @@ type Server struct {
 	syncStatus SyncStatusProvider
 }
 
+// New creates a Server bound to the given store and port, registering all routes.
 func New(s *store.Store, port int) *Server {
 	srv := &Server{store: s, port: port, listen: net.Listen, serve: http.Serve}
 	srv.mux = http.NewServeMux()

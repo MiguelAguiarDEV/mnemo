@@ -22,6 +22,8 @@ import (
 
 // ─── Store Interface ───────────────────────────────────────────────────────
 
+// StoreInterface abstracts the persistence layer used by the orchestrator
+// for messages, budget tracking, and task management.
 type StoreInterface interface {
 	AddMessage(conversationID int64, role, content, model string, tokensIn, tokensOut *int, costUSD *float64) (int64, error)
 	GetMessages(conversationID int64, limit int) ([]StoreMessage, error)
@@ -32,11 +34,13 @@ type StoreInterface interface {
 	UpdateTask(userID string, taskID int64, fields athena.UpdateTaskFields) error
 }
 
+// StoreMessage is a lightweight role+content pair from conversation history.
 type StoreMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
+// StoreBudgetReport summarises Claude cost usage against the configured budget.
 type StoreBudgetReport struct {
 	ClaudeUsed   float64
 	ClaudeBudget float64
@@ -54,6 +58,7 @@ type StoreTask struct {
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 
+// OrchestratorConfig holds the dependencies and settings for creating an Orchestrator.
 type OrchestratorConfig struct {
 	Store            StoreInterface
 	Notifier         notifications.Notifier // optional; Discord DM, etc.
@@ -65,6 +70,8 @@ type OrchestratorConfig struct {
 
 // ─── Orchestrator ──────────────────────────────────────────────────────────
 
+// Orchestrator is the JARVIS brain -- it receives chat messages, selects an LLM
+// model based on complexity and budget, dispatches tool calls, and tracks costs.
 type Orchestrator struct {
 	store            StoreInterface
 	notifier         notifications.Notifier
@@ -88,6 +95,8 @@ type Orchestrator struct {
 	claudeClient *prometheus.ClaudeClient
 }
 
+// New creates an Orchestrator with the given config, initialising the Claude
+// client, async delegation, and the full ATHENA tool registry.
 func New(cfg OrchestratorConfig) *Orchestrator {
 	url := cfg.OpenCodeURL
 	if url == "" {

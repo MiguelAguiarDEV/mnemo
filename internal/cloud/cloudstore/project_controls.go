@@ -8,8 +8,10 @@ import (
 	"strings"
 )
 
+// ErrProjectSyncPaused is returned when a mutation targets a project whose sync is paused.
 var ErrProjectSyncPaused = errors.New("cloudstore: project sync paused")
 
+// ProjectSyncControl holds the sync enable/disable state for a single project.
 type ProjectSyncControl struct {
 	Project      string  `json:"project"`
 	SyncEnabled  bool    `json:"sync_enabled"`
