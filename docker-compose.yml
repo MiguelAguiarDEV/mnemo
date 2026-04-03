@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: engram_cloud
+      POSTGRES_USER: engram
+      POSTGRES_PASSWORD: engram_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - engram_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engram -d engram_cloud"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  engram_pg_data:

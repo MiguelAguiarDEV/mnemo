@@ -1,0 +1,126 @@
+package dashboard
+
+import (
+	"fmt"
+	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+)
+
+// TracesPage renders the main traces list view.
+templ TracesPage(traces []cloudstore.ToolCall, total int) {
+	<section class="frame-section">
+		<div class="section-header">
+			<div>
+				<p class="section-kicker">AGENT TRACES</p>
+				<h2>Tool Call Traces</h2>
+			</div>
+			<div>
+				<span class="metric-value">{ fmt.Sprint(total) }</span>
+				<span class="metric-label">Total Calls</span>
+			</div>
+		</div>
+		<div class="data-frame">
+			if len(traces) == 0 {
+				@EmptyState("No traces yet", "Tool call traces will appear here once agents start reporting.")
+			} else {
+				<div class="table-wrap">
+					<table role="grid">
+						<thead>
+							<tr>
+								<th>Time</th>
+								<th>Session</th>
+								<th>Tool</th>
+								<th>Agent</th>
+								<th>Duration</th>
+								<th>Project</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, tc := range traces {
+								<tr>
+									<td><small>{ tc.OccurredAt }</small></td>
+									<td>
+										<a href={ templ.SafeURL(fmt.Sprintf("/dashboard/traces/session/%s", tc.SessionID)) }>
+											{ truncateID(tc.SessionID) }
+										</a>
+									</td>
+									<td>
+										if tc.IsEngram {
+											@StatusBadge(tc.ToolName, "muted")
+										} else {
+											<strong>{ tc.ToolName }</strong>
+										}
+									</td>
+									<td>{ tc.Agent }</td>
+									<td>
+										if tc.DurationMs != nil {
+											{ fmt.Sprintf("%dms", *tc.DurationMs) }
+										} else {
+											<span class="muted">—</span>
+										}
+									</td>
+									<td>
+										if tc.Project != nil {
+											{ *tc.Project }
+										}
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+// TracesSessionPage renders the detail view for a single session's traces.
+templ TracesSessionPage(sessionID string, traces []cloudstore.ToolCall, total int) {
+	<section class="frame-section">
+		<div class="section-header">
+			<div>
+				<p class="section-kicker">SESSION TRACES</p>
+				<h2>Session { truncateID(sessionID) }</h2>
+			</div>
+			<div>
+				<span class="metric-value">{ fmt.Sprint(total) }</span>
+				<span class="metric-label">Tool Calls</span>
+			</div>
+		</div>
+		<nav aria-label="breadcrumb">
+			<ul>
+				<li><a href="/dashboard/traces">All Traces</a></li>
+				<li>{ truncateID(sessionID) }</li>
+			</ul>
+		</nav>
+		<div class="data-frame">
+			if len(traces) == 0 {
+				@EmptyState("No traces", "No tool calls recorded for this session.")
+			} else {
+				for _, tc := range traces {
+					<details class="trace-detail">
+						<summary>
+							<span class="trace-time">{ tc.OccurredAt }</span>
+							<strong>{ tc.ToolName }</strong>
+							if tc.DurationMs != nil {
+								<span class="badge badge-muted">{ fmt.Sprintf("%dms", *tc.DurationMs) }</span>
+							}
+							if tc.IsEngram {
+								<span class="badge badge-success">engram</span>
+							}
+						</summary>
+						<div class="trace-body">
+							if tc.InputJSON != nil && *tc.InputJSON != "" && *tc.InputJSON != "null" {
+								<p class="section-kicker">INPUT</p>
+								<pre><code>{ *tc.InputJSON }</code></pre>
+							}
+							if tc.OutputText != nil && *tc.OutputText != "" {
+								<p class="section-kicker">OUTPUT</p>
+								<pre><code>{ truncateStr(*tc.OutputText, 2000) }</code></pre>
+							}
+						</div>
+					</details>
+				}
+			}
+		</div>
+	</section>
+}
