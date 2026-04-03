@@ -77,10 +77,11 @@ type Orchestrator struct {
 	sessionID        string // reused OpenCode session for lower latency
 
 	// Skills architecture components
-	registry   *atlas.Registry
-	loader     *atlas.Loader
-	dispatcher *athena.Dispatcher
-	logger     *slog.Logger
+	registry           *atlas.Registry
+	loader             *atlas.Loader
+	dispatcher         *athena.Dispatcher
+	tracingDispatcher  *athena.TracingDispatcher
+	logger             *slog.Logger
 
 	// Async delegation (Tasks 27-29)
 	jobTracker *athena.JobTracker
@@ -301,9 +302,27 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 		AllowPrivateIPs: os.Getenv("JARVIS_ALLOW_PRIVATE_IPS") == "true",
 	}))
 
+	// Initialize tracing dispatcher — wraps the tool dispatcher with fire-and-forget traces.
+	traceURL := os.Getenv("JARVIS_TRACE_URL")
+	if traceURL == "" {
+		traceURL = "http://127.0.0.1:8080/traces/tool-call"
+	}
+	traceToken := os.Getenv("ENGRAM_CLOUD_API_KEY")
+	if traceToken == "" {
+		traceToken = os.Getenv("ENGRAM_API_KEY")
+	}
+
+	o.tracingDispatcher = athena.NewTracingDispatcher(o.dispatcher, athena.TracingConfig{
+		TraceURL:  traceURL,
+		AuthToken: traceToken,
+		Agent:     "jarvis",
+		Project:   "jarvis-dashboard",
+	})
+
 	slog.Info("SKILLS_V2 initialized",
 		"registry_skills", len(o.registry.AlwaysSkills()),
 		"tools", 18,
+		"tracing", traceURL != "",
 	)
 }
 
@@ -710,6 +729,9 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 	// 4. Build conversation messages (history + current)
 	messages := o.buildChatMessages(history, cleanedMessage)
 
+	// Bind tracing to this conversation.
+	o.tracingDispatcher.SetSessionID(fmt.Sprintf("conv-%d", conversationID))
+
 	slog.Debug("PROMETHEUS_V2 chat built",
 		"system_len", len(systemPrompt),
 		"messages", len(messages),
@@ -780,7 +802,7 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 		for _, tb := range toolBlocks {
 			slog.Info("dispatching tool", "name", tb.Name, "id", tb.ID)
 
-			result, err := o.dispatcher.Dispatch(context.Background(), tb.Name, tb.Input)
+			result, err := o.tracingDispatcher.Dispatch(context.Background(), tb.Name, tb.Input)
 			isError := false
 			content := ""
 			if err != nil {
