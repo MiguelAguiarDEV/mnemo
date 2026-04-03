@@ -3,6 +3,7 @@ package cloudserver
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -49,6 +50,47 @@ func (s *CloudServer) handleChatSSE(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusServiceUnavailable, "chat not configured")
 		return
 	}
+
+	// Route through Gateway when WebChannel is configured (Phase 2).
+	// Gateway path collects the full response (no streaming) and returns it as SSE.
+	// This proves the Gateway → WebChannel → Orchestrator flow works.
+	// SSE streaming is preserved: the full response is sent as a single token event.
+	if s.webChannel != nil {
+		slog.Info("message routed through gateway", "channel", "web", "user_id", userID, "conversation_id", body.ConversationID)
+		slog.Debug("gateway routing details", "text_len", len(body.Message), "user_id", userID)
+
+		resp, err := s.webChannel.ProcessHTTPMessage(r.Context(), userID, body.ConversationID, body.Message)
+		if err != nil {
+			slog.Error("gateway routing failed", "channel", "web", "user_id", userID, "error", err)
+			jsonError(w, http.StatusInternalServerError, "chat processing failed")
+			return
+		}
+
+		// Return response as SSE stream (single token + done) to keep client compatibility.
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Accel-Buffering", "no")
+		w.WriteHeader(http.StatusOK)
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			jsonError(w, http.StatusInternalServerError, "streaming not supported")
+			return
+		}
+
+		data, _ := json.Marshal(map[string]string{"token": resp.Text})
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+
+		doneData, _ := json.Marshal(map[string]any{"done": true})
+		fmt.Fprintf(w, "data: %s\n\n", doneData)
+		flusher.Flush()
+		return
+	}
+
+	// Fallback: direct orchestrator call with SSE streaming (pre-Gateway path).
+	slog.Warn("gateway not configured, falling back to direct orchestrator call", "user_id", userID)
 
 	// Set SSE headers.
 	w.Header().Set("Content-Type", "text/event-stream")

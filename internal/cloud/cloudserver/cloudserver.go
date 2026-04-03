@@ -53,7 +53,8 @@ type CloudServer struct {
 	limit    *authRateLimiter
 	dashCfg  dashboard.DashboardConfig
 	costQuerier CostQuerier // optional override for testing cost handlers
-	gw          *gateway.Gateway // multi-channel gateway (Phase 1: initialized but not wired to routes)
+	gw          *gateway.Gateway    // multi-channel gateway
+	webChannel  *gateway.WebChannel // web channel bridge for gateway routing
 }
 
 // New creates a new CloudServer and registers all routes.
@@ -108,10 +109,17 @@ func WithNotifier(n notifications.Notifier) Option {
 }
 
 // WithGateway sets the multi-channel gateway for message routing.
-// Phase 1: gateway is initialized but not wired to HTTP routes yet.
 func WithGateway(gw *gateway.Gateway) Option {
 	return func(s *CloudServer) {
 		s.gw = gw
+	}
+}
+
+// WithWebChannel sets the web channel bridge for gateway routing.
+// When set, chat messages flow through WebChannel → Gateway → Orchestrator.
+func WithWebChannel(wc *gateway.WebChannel) Option {
+	return func(s *CloudServer) {
+		s.webChannel = wc
 	}
 }
 
