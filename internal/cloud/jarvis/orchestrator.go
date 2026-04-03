@@ -721,9 +721,11 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 		resp, err := o.claudeClient.Send(context.Background(), prometheus.ChatRequest{
 			SystemPrompt: systemPrompt,
 			Messages:     messages,
-			Tools:        toolDefs,
-			Model:        model.Model,
-			MaxTokens:    model.MaxTokens,
+			// NOTE: Tools are NOT sent to the bridge. The bridge only handles text.
+			// Tool definitions are in the system prompt; the orchestrator parses
+			// tool_use JSON from Claude's text response and dispatches locally.
+			Model:     model.Model,
+			MaxTokens: model.MaxTokens,
 		})
 		if err != nil {
 			return "", fmt.Errorf("jarvis: claude API (iteration %d): %w", i, err)
