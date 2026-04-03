@@ -294,10 +294,11 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	o.dispatcher.Register(athena.NewGrepTool())
 	o.dispatcher.Register(athena.NewGlobTool())
 
-	// Web tool (fetch_url)
+	// Web tools (fetch_url, web_search)
 	o.dispatcher.Register(athena.NewFetchURLTool(athena.FetchURLConfig{
 		AllowPrivateIPs: os.Getenv("JARVIS_ALLOW_PRIVATE_IPS") == "true",
 	}))
+	o.dispatcher.Register(athena.NewWebSearchTool())
 
 	// Initialize tracing dispatcher — wraps the tool dispatcher with fire-and-forget traces.
 	traceURL := os.Getenv("JARVIS_TRACE_URL")
