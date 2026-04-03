@@ -1215,7 +1215,7 @@ func cmdCloudServe() {
 	gwHandler := func(gwCtx context.Context, msg gateway.IncomingMessage) (gateway.OutgoingMessage, error) {
 		convIDStr := msg.Metadata["conversation_id"]
 		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
-		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, nil)
+		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, func(string) {})
 		if chatErr != nil {
 			return gateway.OutgoingMessage{}, chatErr
 		}
