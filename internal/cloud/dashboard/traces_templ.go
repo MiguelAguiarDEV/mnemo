@@ -318,7 +318,7 @@ func TracesSessionPage(sessionID string, traces []cloudstore.ToolCall, total int
 					}
 				}
 				if tc.IsEngram {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"badge badge-success\">engram</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"badge badge-success\">mnemo</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

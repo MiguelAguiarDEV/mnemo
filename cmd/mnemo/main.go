@@ -1,14 +1,14 @@
-// Engram — Persistent memory for AI coding agents.
+// Mnemo — Persistent memory for AI coding agents.
 //
 // Usage:
 //
-//	engram serve          Start HTTP + MCP server
-//	engram mcp            Start MCP server only (stdio transport)
-//	engram search <query> Search memories from CLI
-//	engram save           Save a memory from CLI
-//	engram context        Show recent context
-//	engram stats          Show memory stats
-//	engram cloud <cmd>    Cloud sync commands
+//	mnemo serve          Start HTTP + MCP server
+//	mnemo mcp            Start MCP server only (stdio transport)
+//	mnemo search <query> Search memories from CLI
+//	mnemo save           Save a memory from CLI
+//	mnemo context        Show recent context
+//	mnemo stats          Show memory stats
+//	mnemo cloud <cmd>    Cloud sync commands
 package main
 
 import (
@@ -132,8 +132,8 @@ func main() {
 		// that os.UserHomeDir() might have missed (e.g. MCP subprocesses on
 		// Windows where %USERPROFILE% is not propagated).
 		if home := resolveHomeFallback(); home != "" {
-			log.Printf("[engram] UserHomeDir failed, using fallback: %s", home)
-			cfg = store.FallbackConfig(filepath.Join(home, ".engram"))
+			log.Printf("[mnemo] UserHomeDir failed, using fallback: %s", home)
+			cfg = store.FallbackConfig(filepath.Join(home, ".mnemo"))
 		} else {
 			fatal(cfgErr)
 		}
@@ -176,7 +176,7 @@ func main() {
 	case "setup":
 		cmdSetup()
 	case "version", "--version", "-v":
-		fmt.Printf("engram %s\n", version)
+		fmt.Printf("mnemo %s\n", version)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -214,7 +214,7 @@ func tryStartAutosync(s *store.Store, dataDir string) (*autosync.Manager, contex
 
 	rt, err := remoteTransportNew(serverURL, token)
 	if err != nil {
-		log.Printf("[engram] autosync: failed to create transport: %v", err)
+		log.Printf("[mnemo] autosync: failed to create transport: %v", err)
 		return nil, nil
 	}
 
@@ -232,7 +232,7 @@ func tryStartAutosync(s *store.Store, dataDir string) (*autosync.Manager, contex
 	ctx, cancel := context.WithCancel(context.Background())
 	go mgr.Run(ctx)
 
-	log.Printf("[engram] autosync: background sync started (server: %s)", serverURL)
+	log.Printf("[mnemo] autosync: background sync started (server: %s)", serverURL)
 	return mgr, cancel
 }
 
@@ -245,7 +245,7 @@ func cmdServe(cfg store.Config) {
 			port = n
 		}
 	}
-	// Allow: engram serve 8080
+	// Allow: mnemo serve 8080
 	if len(os.Args) > 2 {
 		if n, err := strconv.Atoi(os.Args[2]); err == nil {
 			port = n
@@ -272,7 +272,7 @@ func cmdServe(cfg store.Config) {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		log.Println("[engram] shutting down...")
+		log.Println("[mnemo] shutting down...")
 		exitFunc(0)
 	}()
 
@@ -282,7 +282,7 @@ func cmdServe(cfg store.Config) {
 }
 
 func cmdMCP(cfg store.Config) {
-	// Parse --tools flag: engram mcp --tools=agent
+	// Parse --tools flag: mnemo mcp --tools=agent
 	toolsFilter := ""
 	for i := 2; i < len(os.Args); i++ {
 		if strings.HasPrefix(os.Args[i], "--tools=") {
@@ -334,7 +334,7 @@ func cmdTUI(cfg store.Config) {
 
 func cmdSearch(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N] [--remote URL] [--token TOKEN]")
+		fmt.Fprintln(os.Stderr, "usage: mnemo search <query> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N] [--remote URL] [--token TOKEN]")
 		exitFunc(1)
 	}
 
@@ -434,7 +434,7 @@ func cmdSearch(cfg store.Config) {
 
 func cmdSave(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY]")
+		fmt.Fprintln(os.Stderr, "usage: mnemo save <title> <content> [--type TYPE] [--project PROJECT] [--scope SCOPE] [--topic TOPIC_KEY]")
 		exitFunc(1)
 	}
 
@@ -499,7 +499,7 @@ func cmdSave(cfg store.Config) {
 
 func cmdTimeline(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram timeline <observation_id> [--before N] [--after N]")
+		fmt.Fprintln(os.Stderr, "usage: mnemo timeline <observation_id> [--before N] [--after N]")
 		exitFunc(1)
 	}
 
@@ -656,11 +656,11 @@ func cmdStats(cfg store.Config) {
 	fmt.Printf("  Observations: %d\n", stats.TotalObservations)
 	fmt.Printf("  Prompts:      %d\n", stats.TotalPrompts)
 	fmt.Printf("  Projects:     %s\n", projects)
-	fmt.Printf("  Database:     %s/engram.db\n", cfg.DataDir)
+	fmt.Printf("  Database:     %s/mnemo.db\n", cfg.DataDir)
 }
 
 func cmdExport(cfg store.Config) {
-	outFile := "engram-export.json"
+	outFile := "mnemo-export.json"
 	if len(os.Args) > 2 {
 		outFile = os.Args[2]
 	}
@@ -693,7 +693,7 @@ func cmdExport(cfg store.Config) {
 
 func cmdImport(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram import <file.json>")
+		fmt.Fprintln(os.Stderr, "usage: mnemo import <file.json>")
 		exitFunc(1)
 	}
 
@@ -768,7 +768,7 @@ func cmdSync(cfg store.Config) {
 		}
 	}
 
-	syncDir := ".engram"
+	syncDir := ".mnemo"
 
 	s, err := storeNew(cfg)
 	if err != nil {
@@ -817,7 +817,7 @@ func cmdSync(cfg store.Config) {
 			return
 		}
 
-		fmt.Printf("Imported %d new chunk(s) from .engram/\n", result.ChunksImported)
+		fmt.Printf("Imported %d new chunk(s) from .mnemo/\n", result.ChunksImported)
 		fmt.Printf("  Sessions:     %d\n", result.SessionsImported)
 		fmt.Printf("  Observations: %d\n", result.ObservationsImported)
 		fmt.Printf("  Prompts:      %d\n", result.PromptsImported)
@@ -854,7 +854,7 @@ func cmdSync(cfg store.Config) {
 	fmt.Printf("  Prompts:      %d\n", result.PromptsExported)
 	fmt.Println()
 	fmt.Println("Add to git:")
-	fmt.Printf("  git add .engram/ && git commit -m \"sync engram memories\"\n")
+	fmt.Printf("  git add .mnemo/ && git commit -m \"sync mnemo memories\"\n")
 }
 
 func handleRemoteSync(s *store.Store, transport engramsync.Transport, doStatus, doImport, doAll bool, project string) {
@@ -925,7 +925,7 @@ func handleRemoteSync(s *store.Store, transport engramsync.Transport, doStatus, 
 func cmdSetup() {
 	agents := setupSupportedAgents()
 
-	// If agent name given directly: engram setup opencode
+	// If agent name given directly: mnemo setup opencode
 	if len(os.Args) > 2 && !strings.HasPrefix(os.Args[2], "-") {
 		result, err := setupInstallAgent(os.Args[2])
 		if err != nil {
@@ -938,7 +938,7 @@ func cmdSetup() {
 	}
 
 	// Interactive selection
-	fmt.Println("engram setup — Install agent plugin")
+	fmt.Println("mnemo setup — Install agent plugin")
 	fmt.Println()
 	fmt.Println("Which agent do you want to set up?")
 	fmt.Println()
@@ -976,10 +976,10 @@ func printPostInstall(agent string) {
 	case "opencode":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart OpenCode — plugin + MCP server are ready")
-		fmt.Println("  2. Run 'engram serve &' for session tracking (HTTP API)")
+		fmt.Println("  2. Run 'mnemo serve &' for session tracking (HTTP API)")
 	case "claude-code":
-		// Offer to add engram tools to the permissions allowlist
-		fmt.Print("\nAdd engram tools to ~/.claude/settings.json allowlist?\n")
+		// Offer to add mnemo tools to the permissions allowlist
+		fmt.Print("\nAdd mnemo tools to ~/.claude/settings.json allowlist?\n")
 		fmt.Print("This prevents Claude Code from asking permission on every tool call.\n")
 		fmt.Print("Add to allowlist? (y/N): ")
 		var answer string
@@ -990,7 +990,7 @@ func printPostInstall(agent string) {
 				fmt.Fprintf(os.Stderr, "  warning: could not update allowlist: %v\n", err)
 				fmt.Fprintln(os.Stderr, "  You can add them manually to permissions.allow in ~/.claude/settings.json")
 			} else {
-				fmt.Println("  ✓ Engram tools added to allowlist")
+				fmt.Println("  ✓ Mnemo tools added to allowlist")
 			}
 		} else {
 			fmt.Println("  Skipped. You can add them later to permissions.allow in ~/.claude/settings.json")
@@ -1002,19 +1002,19 @@ func printPostInstall(agent string) {
 	case "gemini-cli":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart Gemini CLI so MCP config is reloaded")
-		fmt.Println("  2. Verify ~/.gemini/settings.json includes mcpServers.engram")
+		fmt.Println("  2. Verify ~/.gemini/settings.json includes mcpServers.mnemo")
 		fmt.Println("  3. Verify ~/.gemini/system.md + ~/.gemini/.env exist for compaction recovery")
 	case "codex":
 		fmt.Println("\nNext steps:")
 		fmt.Println("  1. Restart Codex so MCP config is reloaded")
-		fmt.Println("  2. Verify ~/.codex/config.toml has [mcp_servers.engram]")
+		fmt.Println("  2. Verify ~/.codex/config.toml has [mcp_servers.mnemo]")
 		fmt.Println("  3. Verify model_instructions_file + experimental_compact_prompt_file are set")
 	}
 }
 
 // ─── Cloud Commands ──────────────────────────────────────────────────────────
 
-// CloudConfig holds saved cloud credentials at ~/.engram/cloud.json.
+// CloudConfig holds saved cloud credentials at ~/.mnemo/cloud.json.
 type CloudConfig struct {
 	ServerURL    string `json:"server_url"`
 	Token        string `json:"token"`
@@ -1031,7 +1031,7 @@ func cloudConfigPath(dataDir string) string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".engram", "cloud.json")
+	return filepath.Join(home, ".mnemo", "cloud.json")
 }
 
 func loadCloudConfig(dataDir string) (*CloudConfig, error) {
@@ -1099,7 +1099,7 @@ func saveCloudConfig(dataDir string, cc *CloudConfig) error {
 
 func cmdCloud(cfg store.Config) {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud <serve|register|login|sync|sync-status|status|api-key|enroll|unenroll|projects>")
+		fmt.Fprintln(os.Stderr, "usage: mnemo cloud <serve|register|login|sync|sync-status|status|api-key|enroll|unenroll|projects>")
 		exitFunc(1)
 		return
 	}
@@ -1127,7 +1127,7 @@ func cmdCloud(cfg store.Config) {
 		cmdCloudProjects(cfg)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown cloud command: %s\n", os.Args[2])
-		fmt.Fprintln(os.Stderr, "usage: engram cloud <serve|register|login|sync|sync-status|status|api-key|enroll|unenroll|projects>")
+		fmt.Fprintln(os.Stderr, "usage: mnemo cloud <serve|register|login|sync|sync-status|status|api-key|enroll|unenroll|projects>")
 		exitFunc(1)
 		return
 	}
@@ -1187,7 +1187,7 @@ func cmdCloudServe() {
 	var notifier notifications.Notifier
 	if botToken := os.Getenv("DISCORD_BOT_TOKEN"); botToken != "" {
 		if userID := os.Getenv("DISCORD_USER_ID"); userID != "" {
-			log.Printf("[engram-cloud] Discord DM notifications enabled for user %s", userID)
+			log.Printf("[mnemo-cloud] Discord DM notifications enabled for user %s", userID)
 			notifier = notifications.NewDiscord(botToken, userID)
 		}
 	}
@@ -1204,10 +1204,10 @@ func cmdCloudServe() {
 	defer cancel()
 
 	// Start background JARVIS subsystems.
-	log.Println("[engram-cloud] starting JARVIS dream (memory consolidation)")
+	log.Println("[mnemo-cloud] starting JARVIS dream (memory consolidation)")
 	orch.StartDream(ctx)
 
-	log.Println("[engram-cloud] starting JARVIS ticker (proactive health checks)")
+	log.Println("[mnemo-cloud] starting JARVIS ticker (proactive health checks)")
 	orch.StartTicker(ctx)
 
 	// ── Gateway setup ──────────────────────────────────────────────────────
@@ -1232,7 +1232,7 @@ func cmdCloudServe() {
 	// Web channel (always enabled).
 	webCh := gateway.NewWebChannel(gw)
 	if err := gw.Register(webCh); err != nil {
-		log.Printf("[engram-cloud] WARN: failed to register web channel: %v", err)
+		log.Printf("[mnemo-cloud] WARN: failed to register web channel: %v", err)
 	}
 
 	// Discord channel (opt-in via JARVIS_DISCORD_ENABLED).
@@ -1247,17 +1247,17 @@ func cmdCloudServe() {
 			gateway.WithDiscordChannelGateway(gw),
 		)
 		if err := gw.Register(discordCh); err != nil {
-			log.Printf("[engram-cloud] WARN: failed to register discord channel: %v", err)
+			log.Printf("[mnemo-cloud] WARN: failed to register discord channel: %v", err)
 		} else {
-			log.Println("[engram-cloud] Discord channel registered (JARVIS_DISCORD_ENABLED=true)")
+			log.Println("[mnemo-cloud] Discord channel registered (JARVIS_DISCORD_ENABLED=true)")
 		}
 	} else if discordEnabled && discordToken == "" {
-		log.Println("[engram-cloud] WARN: JARVIS_DISCORD_ENABLED=true but DISCORD_BOT_TOKEN is empty — Discord channel not started")
+		log.Println("[mnemo-cloud] WARN: JARVIS_DISCORD_ENABLED=true but DISCORD_BOT_TOKEN is empty — Discord channel not started")
 	}
 
 	// Start Gateway (starts all registered channels).
 	if err := gw.Start(ctx); err != nil {
-		log.Printf("[engram-cloud] WARN: gateway start failed: %v", err)
+		log.Printf("[mnemo-cloud] WARN: gateway start failed: %v", err)
 	}
 
 	opts := []cloudserver.Option{
@@ -1474,7 +1474,7 @@ func cmdCloudSync(cfg store.Config) {
 		fatal(err)
 	}
 	if serverURL == "" || token == "" {
-		fatal(fmt.Errorf("cloud config missing server_url or token (run 'engram cloud login' first)"))
+		fatal(fmt.Errorf("cloud config missing server_url or token (run 'mnemo cloud login' first)"))
 	}
 
 	s, err := storeNew(cfg)
@@ -1558,7 +1558,7 @@ func cmdCloudSyncStatus(cfg store.Config) {
 	state, err := s.GetSyncState(store.DefaultSyncTargetKey)
 	if err != nil {
 		fmt.Println("Cloud sync status: not initialized")
-		fmt.Println("  Run 'engram cloud login' and then 'engram cloud sync' to start syncing.")
+		fmt.Println("  Run 'mnemo cloud login' and then 'mnemo cloud sync' to start syncing.")
 		return
 	}
 
@@ -1611,7 +1611,7 @@ func cmdCloudStatus(cfg store.Config) {
 		fatal(err)
 	}
 	if serverURL == "" || token == "" {
-		fatal(fmt.Errorf("cloud config missing server_url or token (run 'engram cloud login' first)"))
+		fatal(fmt.Errorf("cloud config missing server_url or token (run 'mnemo cloud login' first)"))
 	}
 
 	s, err := storeNew(cfg)
@@ -1641,10 +1641,10 @@ func cmdCloudStatus(cfg store.Config) {
 func cmdCloudAPIKey(dataDir string) {
 	cc, err := loadCloudConfig(dataDir)
 	if err != nil {
-		fatal(fmt.Errorf("load cloud config: %w (run 'engram cloud login' first)", err))
+		fatal(fmt.Errorf("load cloud config: %w (run 'mnemo cloud login' first)", err))
 	}
 	if cc.ServerURL == "" || cc.Token == "" {
-		fatal(fmt.Errorf("cloud config missing server_url or token (run 'engram cloud login' first)"))
+		fatal(fmt.Errorf("cloud config missing server_url or token (run 'mnemo cloud login' first)"))
 	}
 
 	client := cloudHTTPClient()
@@ -1689,7 +1689,7 @@ func cmdCloudAPIKey(dataDir string) {
 // cmdCloudEnroll enrolls a project for cloud sync.
 func cmdCloudEnroll(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud enroll <project>")
+		fmt.Fprintln(os.Stderr, "usage: mnemo cloud enroll <project>")
 		exitFunc(1)
 		return
 	}
@@ -1712,7 +1712,7 @@ func cmdCloudEnroll(cfg store.Config) {
 // cmdCloudUnenroll removes a project from cloud sync enrollment.
 func cmdCloudUnenroll(cfg store.Config) {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: engram cloud unenroll <project>")
+		fmt.Fprintln(os.Stderr, "usage: mnemo cloud unenroll <project>")
 		exitFunc(1)
 		return
 	}
@@ -1747,7 +1747,7 @@ func cmdCloudProjects(cfg store.Config) {
 
 	if len(projects) == 0 {
 		fmt.Println("No projects enrolled for cloud sync.")
-		fmt.Println("  Use 'engram cloud enroll <project>' to enroll a project.")
+		fmt.Println("  Use 'mnemo cloud enroll <project>' to enroll a project.")
 		return
 	}
 
@@ -1887,17 +1887,17 @@ func remoteContext(serverURL, token, project, scope string) {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func printUsage() {
-	fmt.Printf(`engram v%s — Persistent memory for AI coding agents
+	fmt.Printf(`mnemo v%s — Persistent memory for AI coding agents
 
 Usage:
-  engram <command> [arguments]
+  mnemo <command> [arguments]
 
 Commands:
   serve [port]       Start HTTP API server (default: 7437)
   mcp [--tools=PROFILE] Start MCP server (stdio transport, for any AI agent)
                        Profiles: agent (11 tools), admin (3 tools), all (default, 14)
                        Combine: --tools=agent,admin or pick individual tools
-                       Example: engram mcp --tools=agent
+                       Example: mnemo mcp --tools=agent
   tui                Launch interactive terminal UI
   search <query>     Search memories [--type TYPE] [--project PROJECT] [--scope SCOPE] [--limit N]
                        [--remote URL] [--token TOKEN]  Query cloud server instead of local DB
@@ -1906,11 +1906,11 @@ Commands:
   context [project]  Show recent context from previous sessions
                        [--remote URL] [--token TOKEN]  Query cloud server instead of local DB
   stats              Show memory system statistics
-  export [file]      Export all memories to JSON (default: engram-export.json)
+  export [file]      Export all memories to JSON (default: mnemo-export.json)
   import <file>      Import memories from a JSON export file
   setup [agent]      Install/setup agent integration (opencode, claude-code, gemini-cli, codex)
-  sync               Export new memories as compressed chunk to .engram/
-                       --import   Import new chunks from .engram/ into local DB
+  sync               Export new memories as compressed chunk to .mnemo/
+                       --import   Import new chunks from .mnemo/ into local DB
                        --status   Show sync status (local vs remote chunks)
                        --project  Filter export to a specific project
                        --all      Export ALL projects (ignore directory-based filter)
@@ -1935,7 +1935,7 @@ Commands:
   help               Show this help
 
 Environment:
-  ENGRAM_DATA_DIR    Override data directory (default: ~/.engram)
+  ENGRAM_DATA_DIR    Override data directory (default: ~/.mnemo)
   ENGRAM_PORT        Override HTTP server port (default: 7437)
   ENGRAM_REMOTE_URL  Cloud server URL (used by --remote flag)
   ENGRAM_TOKEN       Cloud auth token (used by --token flag)
@@ -1945,9 +1945,9 @@ Environment:
 MCP Configuration (add to your agent's config):
   {
     "mcp": {
-      "engram": {
+      "mnemo": {
         "type": "stdio",
-        "command": "engram",
+        "command": "mnemo",
         "args": ["mcp", "--tools=agent"]
       }
     }
@@ -1956,13 +1956,13 @@ MCP Configuration (add to your agent's config):
 }
 
 func fatal(err error) {
-	fmt.Fprintf(os.Stderr, "engram: %s\n", err)
+	fmt.Fprintf(os.Stderr, "mnemo: %s\n", err)
 	exitFunc(1)
 }
 
 // resolveHomeFallback tries platform-specific environment variables to find
 // a home directory when os.UserHomeDir() fails. This commonly happens on
-// Windows when engram is launched as an MCP subprocess without full env
+// Windows when mnemo is launched as an MCP subprocess without full env
 // propagation.
 func resolveHomeFallback() string {
 	// Windows: try common env vars that might be set even when
@@ -1988,28 +1988,28 @@ func resolveHomeFallback() string {
 	return ""
 }
 
-// migrateOrphanedDB checks for engram databases that ended up in wrong
+// migrateOrphanedDB checks for mnemo databases that ended up in wrong
 // locations (e.g. drive root on Windows when UserHomeDir failed silently)
 // and moves them to the correct location if the correct location has no DB.
 func migrateOrphanedDB(correctDir string) {
-	correctDB := filepath.Join(correctDir, "engram.db")
+	correctDB := filepath.Join(correctDir, "mnemo.db")
 
 	// If the correct DB already exists, nothing to migrate.
 	if _, err := os.Stat(correctDB); err == nil {
 		return
 	}
 
-	// Known wrong locations: relative ".engram" resolved from common roots.
-	// On Windows this typically ends up at C:\.engram or D:\.engram.
+	// Known wrong locations: relative ".mnemo" resolved from common roots.
+	// On Windows this typically ends up at C:\.mnemo or D:\.mnemo.
 	candidates := []string{
-		filepath.Join(string(filepath.Separator), ".engram", "engram.db"),
+		filepath.Join(string(filepath.Separator), ".mnemo", "mnemo.db"),
 	}
 
 	// On Windows, check all drive letter roots.
 	if filepath.Separator == '\\' {
 		for _, drive := range "CDEFGHIJ" {
 			candidates = append(candidates,
-				filepath.Join(string(drive)+":\\", ".engram", "engram.db"),
+				filepath.Join(string(drive)+":\\", ".mnemo", "mnemo.db"),
 			)
 		}
 	}
@@ -2024,10 +2024,10 @@ func migrateOrphanedDB(correctDir string) {
 		}
 
 		// Found an orphaned DB — migrate it.
-		log.Printf("[engram] found orphaned database at %s, migrating to %s", candidate, correctDB)
+		log.Printf("[mnemo] found orphaned database at %s, migrating to %s", candidate, correctDB)
 
 		if err := os.MkdirAll(correctDir, 0755); err != nil {
-			log.Printf("[engram] migration failed (create dir): %v", err)
+			log.Printf("[mnemo] migration failed (create dir): %v", err)
 			return
 		}
 
@@ -2039,7 +2039,7 @@ func migrateOrphanedDB(correctDir string) {
 				continue
 			}
 			if renameErr := os.Rename(src, dst); renameErr != nil {
-				log.Printf("[engram] migration failed (move %s): %v", filepath.Base(src), renameErr)
+				log.Printf("[mnemo] migration failed (move %s): %v", filepath.Base(src), renameErr)
 				return
 			}
 		}
@@ -2051,7 +2051,7 @@ func migrateOrphanedDB(correctDir string) {
 			os.Remove(orphanDir)
 		}
 
-		log.Printf("[engram] migration complete — memories recovered")
+		log.Printf("[mnemo] migration complete — memories recovered")
 		return
 	}
 }

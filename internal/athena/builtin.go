@@ -563,7 +563,7 @@ func (t *NotifyTool) Execute(ctx context.Context, params json.RawMessage) (ToolR
 
 // ─── SearchMemoryTool ─────────────────────────────────────────────────────
 
-// SearchMemoryTool implements Tool for searching engram memory.
+// SearchMemoryTool implements Tool for searching mnemo memory.
 type SearchMemoryTool struct {
 	runner    CommandRunner
 	engramBin string
@@ -619,7 +619,7 @@ func (t *SearchMemoryTool) Execute(ctx context.Context, params json.RawMessage) 
 
 // ─── SaveMemoryTool ───────────────────────────────────────────────────────
 
-// SaveMemoryTool implements Tool for saving to engram memory.
+// SaveMemoryTool implements Tool for saving to mnemo memory.
 type SaveMemoryTool struct {
 	runner    CommandRunner
 	engramBin string

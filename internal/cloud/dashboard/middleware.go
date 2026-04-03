@@ -9,7 +9,7 @@ import (
 
 // sessionCookieName is the name of the HTTP-only cookie that stores the JWT
 // access token for browser sessions.
-const sessionCookieName = "engram_session"
+const sessionCookieName = "mnemo_session"
 
 // contextKey is an unexported type for context keys, preventing collisions
 // with other packages.
@@ -21,7 +21,7 @@ const (
 	ctxEmail    contextKey = "dashboard_email"
 )
 
-// withCookieAuth is middleware that extracts a JWT from the engram_session
+// withCookieAuth is middleware that extracts a JWT from the mnemo_session
 // cookie, validates it via auth.Service, and injects user info into the
 // request context. On failure it redirects to the login page.
 //

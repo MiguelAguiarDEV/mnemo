@@ -299,7 +299,7 @@ func TestStatusMock(t *testing.T) {
 		case "/health":
 			json.NewEncoder(w).Encode(map[string]any{
 				"status":  "ok",
-				"service": "engram-cloud",
+				"service": "mnemo-cloud",
 				"version": "0.1.0",
 			})
 		case "/api/tasks":

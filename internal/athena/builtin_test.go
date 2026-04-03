@@ -721,7 +721,7 @@ func TestNotifyTool_Error(t *testing.T) {
 
 func TestSearchMemoryTool_Success(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte(`[{"id":1,"title":"Found something"}]`)}
-	tool := NewSearchMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSearchMemoryTool("/usr/local/bin/mnemo", runner)
 
 	if tool.Name() != "search_memory" {
 		t.Errorf("name = %q, want %q", tool.Name(), "search_memory")
@@ -741,7 +741,7 @@ func TestSearchMemoryTool_Success(t *testing.T) {
 	if len(runner.lastArgs) < 3 {
 		t.Fatalf("expected at least 3 args, got %v", runner.lastArgs)
 	}
-	if runner.lastArgs[0] != "/usr/local/bin/engram" {
+	if runner.lastArgs[0] != "/usr/local/bin/mnemo" {
 		t.Errorf("binary = %q", runner.lastArgs[0])
 	}
 	if runner.lastArgs[1] != "search" {
@@ -754,7 +754,7 @@ func TestSearchMemoryTool_Success(t *testing.T) {
 
 func TestSearchMemoryTool_WithFilters(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte(`[]`)}
-	tool := NewSearchMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSearchMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"query":"auth","project":"jarvis","type":"decision"}`))
 	if err != nil {
@@ -775,7 +775,7 @@ func TestSearchMemoryTool_WithFilters(t *testing.T) {
 
 func TestSearchMemoryTool_CLIError(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte("command not found"), err: fmt.Errorf("exit status 1")}
-	tool := NewSearchMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSearchMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"query":"test"}`))
 	if err != nil {
@@ -791,7 +791,7 @@ func TestSearchMemoryTool_CLIError(t *testing.T) {
 
 func TestSearchMemoryTool_MissingQuery(t *testing.T) {
 	runner := &mockCommandRunner{}
-	tool := NewSearchMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSearchMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
@@ -809,7 +809,7 @@ func TestSearchMemoryTool_MissingQuery(t *testing.T) {
 
 func TestSaveMemoryTool_Success(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte("observation saved: id=42")}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	if tool.Name() != "save_memory" {
 		t.Errorf("name = %q, want %q", tool.Name(), "save_memory")
@@ -840,7 +840,7 @@ func TestSaveMemoryTool_Success(t *testing.T) {
 
 func TestSaveMemoryTool_MissingTitle(t *testing.T) {
 	runner := &mockCommandRunner{}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"content":"data","type":"decision"}`))
 	if err != nil {
@@ -856,7 +856,7 @@ func TestSaveMemoryTool_MissingTitle(t *testing.T) {
 
 func TestSaveMemoryTool_MissingContent(t *testing.T) {
 	runner := &mockCommandRunner{}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"Test","type":"decision"}`))
 	if err != nil {
@@ -872,7 +872,7 @@ func TestSaveMemoryTool_MissingContent(t *testing.T) {
 
 func TestSaveMemoryTool_MissingType(t *testing.T) {
 	runner := &mockCommandRunner{}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"Test","content":"data"}`))
 	if err != nil {
@@ -888,7 +888,7 @@ func TestSaveMemoryTool_MissingType(t *testing.T) {
 
 func TestSaveMemoryTool_CLIError(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte("error"), err: fmt.Errorf("exit status 1")}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"Test","content":"data","type":"decision"}`))
 	if err != nil {
@@ -904,7 +904,7 @@ func TestSaveMemoryTool_CLIError(t *testing.T) {
 
 func TestSaveMemoryTool_NoProject(t *testing.T) {
 	runner := &mockCommandRunner{output: []byte("saved")}
-	tool := NewSaveMemoryTool("/usr/local/bin/engram", runner)
+	tool := NewSaveMemoryTool("/usr/local/bin/mnemo", runner)
 
 	result, err := tool.Execute(context.Background(), json.RawMessage(`{"title":"Test","content":"data","type":"bugfix"}`))
 	if err != nil {
@@ -1216,14 +1216,14 @@ func TestAllTools_Metadata(t *testing.T) {
 // ─── Memory Tool nil runner defaults ──────────────────────────────────────
 
 func TestNewSearchMemoryTool_NilRunner(t *testing.T) {
-	tool := NewSearchMemoryTool("/bin/engram", nil)
+	tool := NewSearchMemoryTool("/bin/mnemo", nil)
 	if tool.runner == nil {
 		t.Error("expected default runner, got nil")
 	}
 }
 
 func TestNewSaveMemoryTool_NilRunner(t *testing.T) {
-	tool := NewSaveMemoryTool("/bin/engram", nil)
+	tool := NewSaveMemoryTool("/bin/mnemo", nil)
 	if tool.runner == nil {
 		t.Error("expected default runner, got nil")
 	}
@@ -1241,8 +1241,8 @@ func TestAllTools_InvalidJSON(t *testing.T) {
 		NewAsyncDelegateTool(&mockAsyncDelegateHandler{}),
 		NewGetJobTool(&mockJobLister{}),
 		NewNotifyTool(&mockNotifier{}),
-		NewSearchMemoryTool("/bin/engram", &mockCommandRunner{}),
-		NewSaveMemoryTool("/bin/engram", &mockCommandRunner{}),
+		NewSearchMemoryTool("/bin/mnemo", &mockCommandRunner{}),
+		NewSaveMemoryTool("/bin/mnemo", &mockCommandRunner{}),
 	}
 
 	for _, tool := range tools {

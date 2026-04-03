@@ -24,7 +24,7 @@ import (
 // RemoteTransport pushes/pulls chunks over HTTP to an Engram cloud server.
 // It implements sync.Transport.
 type RemoteTransport struct {
-	baseURL    string       // e.g. "https://engram.example.com"
+	baseURL    string       // e.g. "https://mnemo.example.com"
 	token      string       // JWT or API key
 	httpClient *http.Client // configurable for testing
 

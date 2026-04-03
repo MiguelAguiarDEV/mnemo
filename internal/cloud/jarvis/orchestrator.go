@@ -269,7 +269,7 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	// Memory tools
 	engramBin := os.Getenv("ENGRAM_BIN")
 	if engramBin == "" {
-		engramBin = "engram"
+		engramBin = "mnemo"
 	}
 	o.dispatcher.Register(athena.NewSearchMemoryTool(engramBin, nil))
 	o.dispatcher.Register(athena.NewSaveMemoryTool(engramBin, nil))
@@ -332,10 +332,10 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 func (o *Orchestrator) StartDream(ctx context.Context) {
 	engramBin := os.Getenv("ENGRAM_BIN")
 	if engramBin == "" {
-		engramBin = "engram"
+		engramBin = "mnemo"
 	}
 
-	lockPath := filepath.Join(os.TempDir(), "engram-consolidate.lock")
+	lockPath := filepath.Join(os.TempDir(), "mnemo-consolidate.lock")
 	if d := os.Getenv("JARVIS_DREAM_LOCK"); d != "" {
 		lockPath = d
 	}
@@ -375,9 +375,9 @@ func (o *Orchestrator) StartTicker(ctx context.Context) {
 	// Build the dream consolidator for the memory check.
 	engramBin := os.Getenv("ENGRAM_BIN")
 	if engramBin == "" {
-		engramBin = "engram"
+		engramBin = "mnemo"
 	}
-	lockPath := filepath.Join(os.TempDir(), "engram-consolidate.lock")
+	lockPath := filepath.Join(os.TempDir(), "mnemo-consolidate.lock")
 	if d := os.Getenv("JARVIS_DREAM_LOCK"); d != "" {
 		lockPath = d
 	}

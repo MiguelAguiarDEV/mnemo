@@ -155,7 +155,7 @@ func TestPrintUsage(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
 	}
-	if !strings.Contains(stdout, "engram vtest-version") {
+	if !strings.Contains(stdout, "mnemo vtest-version") {
 		t.Fatalf("usage missing version: %q", stdout)
 	}
 	if !strings.Contains(stdout, "search <query>") || !strings.Contains(stdout, "setup [agent]") {
@@ -168,7 +168,7 @@ func TestPrintPostInstall(t *testing.T) {
 		agent   string
 		expects []string
 	}{
-		{agent: "opencode", expects: []string{"Restart OpenCode", "engram serve &"}},
+		{agent: "opencode", expects: []string{"Restart OpenCode", "mnemo serve &"}},
 		{agent: "gemini-cli", expects: []string{"Restart Gemini CLI", "~/.gemini/settings.json"}},
 		{agent: "codex", expects: []string{"Restart Codex", "~/.codex/config.toml"}},
 		{agent: "unknown", expects: nil},
@@ -280,7 +280,7 @@ func TestCmdSaveAndSearch(t *testing.T) {
 	cfg := testConfig(t)
 
 	withArgs(t,
-		"engram", "save", "my-title", "my-content",
+		"mnemo", "save", "my-title", "my-content",
 		"--type", "bugfix",
 		"--project", "alpha",
 		"--scope", "personal",
@@ -295,7 +295,7 @@ func TestCmdSaveAndSearch(t *testing.T) {
 		t.Fatalf("unexpected save output: %q", stdout)
 	}
 
-	withArgs(t, "engram", "search", "my-content", "--type", "bugfix", "--project", "alpha", "--scope", "personal", "--limit", "1")
+	withArgs(t, "mnemo", "search", "my-content", "--type", "bugfix", "--project", "alpha", "--scope", "personal", "--limit", "1")
 	searchOut, searchErr := captureOutput(t, func() { cmdSearch(cfg) })
 	if searchErr != "" {
 		t.Fatalf("expected no stderr from search, got: %q", searchErr)
@@ -304,7 +304,7 @@ func TestCmdSaveAndSearch(t *testing.T) {
 		t.Fatalf("unexpected search output: %q", searchOut)
 	}
 
-	withArgs(t, "engram", "search", "definitely-not-found")
+	withArgs(t, "mnemo", "search", "definitely-not-found")
 	noneOut, noneErr := captureOutput(t, func() { cmdSearch(cfg) })
 	if noneErr != "" {
 		t.Fatalf("expected no stderr from empty search, got: %q", noneErr)
@@ -320,7 +320,7 @@ func TestCmdTimeline(t *testing.T) {
 	focusID := mustSeedObservation(t, cfg, "s-1", "proj", "note", "focus", "focus content", "project")
 	mustSeedObservation(t, cfg, "s-1", "proj", "note", "third", "third content", "project")
 
-	withArgs(t, "engram", "timeline", strconv.FormatInt(focusID, 10), "--before", "1", "--after", "1")
+	withArgs(t, "mnemo", "timeline", strconv.FormatInt(focusID, 10), "--before", "1", "--after", "1")
 	stdout, stderr := captureOutput(t, func() { cmdTimeline(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -336,7 +336,7 @@ func TestCmdTimeline(t *testing.T) {
 func TestCmdContextAndStats(t *testing.T) {
 	cfg := testConfig(t)
 
-	withArgs(t, "engram", "context")
+	withArgs(t, "mnemo", "context")
 	emptyCtxOut, emptyCtxErr := captureOutput(t, func() { cmdContext(cfg) })
 	if emptyCtxErr != "" {
 		t.Fatalf("expected no stderr for empty context, got: %q", emptyCtxErr)
@@ -357,7 +357,7 @@ func TestCmdContextAndStats(t *testing.T) {
 	}
 	_ = s.Close()
 
-	withArgs(t, "engram", "context", "project-x")
+	withArgs(t, "mnemo", "context", "project-x")
 	ctxOut, ctxErr := captureOutput(t, func() { cmdContext(cfg) })
 	if ctxErr != "" {
 		t.Fatalf("expected no stderr for populated context, got: %q", ctxErr)
@@ -366,7 +366,7 @@ func TestCmdContextAndStats(t *testing.T) {
 		t.Fatalf("unexpected populated context output: %q", ctxOut)
 	}
 
-	withArgs(t, "engram", "stats")
+	withArgs(t, "mnemo", "stats")
 	statsOut, statsErr := captureOutput(t, func() { cmdStats(cfg) })
 	if statsErr != "" {
 		t.Fatalf("expected no stderr from stats, got: %q", statsErr)
@@ -384,7 +384,7 @@ func TestCmdExportAndImport(t *testing.T) {
 
 	exportPath := filepath.Join(t.TempDir(), "memories.json")
 
-	withArgs(t, "engram", "export", exportPath)
+	withArgs(t, "mnemo", "export", exportPath)
 	exportOut, exportErr := captureOutput(t, func() { cmdExport(sourceCfg) })
 	if exportErr != "" {
 		t.Fatalf("expected no stderr from export, got: %q", exportErr)
@@ -393,7 +393,7 @@ func TestCmdExportAndImport(t *testing.T) {
 		t.Fatalf("unexpected export output: %q", exportOut)
 	}
 
-	withArgs(t, "engram", "import", exportPath)
+	withArgs(t, "mnemo", "import", exportPath)
 	importOut, importErr := captureOutput(t, func() { cmdImport(targetCfg) })
 	if importErr != "" {
 		t.Fatalf("expected no stderr from import, got: %q", importErr)
@@ -426,7 +426,7 @@ func TestCmdSyncStatusExportAndImport(t *testing.T) {
 
 	mustSeedObservation(t, exportCfg, "s-sync", "sync-project", "note", "sync title", "sync content", "project")
 
-	withArgs(t, "engram", "sync", "--status")
+	withArgs(t, "mnemo", "sync", "--status")
 	statusOut, statusErr := captureOutput(t, func() { cmdSync(exportCfg) })
 	if statusErr != "" {
 		t.Fatalf("expected no stderr from status, got: %q", statusErr)
@@ -435,7 +435,7 @@ func TestCmdSyncStatusExportAndImport(t *testing.T) {
 		t.Fatalf("unexpected status output: %q", statusOut)
 	}
 
-	withArgs(t, "engram", "sync", "--all")
+	withArgs(t, "mnemo", "sync", "--all")
 	exportOut, exportErr := captureOutput(t, func() { cmdSync(exportCfg) })
 	if exportErr != "" {
 		t.Fatalf("expected no stderr from sync export, got: %q", exportErr)
@@ -444,7 +444,7 @@ func TestCmdSyncStatusExportAndImport(t *testing.T) {
 		t.Fatalf("unexpected sync export output: %q", exportOut)
 	}
 
-	withArgs(t, "engram", "sync", "--import")
+	withArgs(t, "mnemo", "sync", "--import")
 	importOut, importErr := captureOutput(t, func() { cmdSync(importCfg) })
 	if importErr != "" {
 		t.Fatalf("expected no stderr from sync import, got: %q", importErr)
@@ -453,7 +453,7 @@ func TestCmdSyncStatusExportAndImport(t *testing.T) {
 		t.Fatalf("unexpected sync import output: %q", importOut)
 	}
 
-	withArgs(t, "engram", "sync", "--import")
+	withArgs(t, "mnemo", "sync", "--import")
 	noopOut, noopErr := captureOutput(t, func() { cmdSync(importCfg) })
 	if noopErr != "" {
 		t.Fatalf("expected no stderr from second sync import, got: %q", noopErr)
@@ -471,7 +471,7 @@ func TestCmdSyncDefaultProjectNoData(t *testing.T) {
 	withCwd(t, workDir)
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "sync")
+	withArgs(t, "mnemo", "sync")
 	stdout, stderr := captureOutput(t, func() { cmdSync(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -516,7 +516,7 @@ func TestCmdSyncRemoteNoOp(t *testing.T) {
 	t.Cleanup(func() { cloudHTTPClient = oldClient })
 	cloudHTTPClient = func() *http.Client { return srv.Client() }
 
-	withArgs(t, "engram", "sync", "--remote", srv.URL, "--token", "sync-token")
+	withArgs(t, "mnemo", "sync", "--remote", srv.URL, "--token", "sync-token")
 	stdout, stderr := captureOutput(t, func() { cmdSync(testConfig(t)) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got %q", stderr)
@@ -543,9 +543,9 @@ func TestMainVersionAndHelpAliases(t *testing.T) {
 		contains  string
 		notStderr bool
 	}{
-		{name: "version", arg: "version", contains: "engram 9.9.9-test", notStderr: true},
-		{name: "version short", arg: "-v", contains: "engram 9.9.9-test", notStderr: true},
-		{name: "version long", arg: "--version", contains: "engram 9.9.9-test", notStderr: true},
+		{name: "version", arg: "version", contains: "mnemo 9.9.9-test", notStderr: true},
+		{name: "version short", arg: "-v", contains: "mnemo 9.9.9-test", notStderr: true},
+		{name: "version long", arg: "--version", contains: "mnemo 9.9.9-test", notStderr: true},
 		{name: "help", arg: "help", contains: "Usage:", notStderr: true},
 		{name: "help short", arg: "-h", contains: "Commands:", notStderr: true},
 		{name: "help long", arg: "--help", contains: "Environment:", notStderr: true},
@@ -553,7 +553,7 @@ func TestMainVersionAndHelpAliases(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			withArgs(t, "engram", tc.arg)
+			withArgs(t, "mnemo", tc.arg)
 			stdout, stderr := captureOutput(t, func() { main() })
 			if tc.notStderr && stderr != "" {
 				t.Fatalf("expected no stderr, got: %q", stderr)
@@ -613,11 +613,11 @@ func TestMainExitHelper(t *testing.T) {
 
 	switch os.Getenv("HELPER_CASE") {
 	case "no-args":
-		os.Args = []string{"engram"}
+		os.Args = []string{"mnemo"}
 	case "unknown":
-		os.Args = []string{"engram", "definitely-unknown-command"}
+		os.Args = []string{"mnemo", "definitely-unknown-command"}
 	default:
-		os.Args = []string{"engram", "--help"}
+		os.Args = []string{"mnemo", "--help"}
 	}
 
 	main()
@@ -639,7 +639,7 @@ func TestCmdCloudServeMissingDatabaseURL(t *testing.T) {
 		exitCode = code
 	}
 
-	withArgs(t, "engram", "cloud", "serve")
+	withArgs(t, "mnemo", "cloud", "serve")
 	_, stderr := captureOutput(t, func() { cmdCloudServe() })
 
 	if !exitCalled || exitCode != 1 {
@@ -663,7 +663,7 @@ func TestCmdCloudServeMissingJWTSecret(t *testing.T) {
 		exitCode = code
 	}
 
-	withArgs(t, "engram", "cloud", "serve")
+	withArgs(t, "mnemo", "cloud", "serve")
 	_, stderr := captureOutput(t, func() { cmdCloudServe() })
 
 	if !exitCalled || exitCode != 1 {
@@ -684,7 +684,7 @@ func TestCmdCloudServeWithFlags(t *testing.T) {
 	exitFunc = func(code int) {}
 
 	// Test that providing --database-url doesn't trigger the "missing" error
-	withArgs(t, "engram", "cloud", "serve", "--database-url", "postgres://flag@localhost/flag")
+	withArgs(t, "mnemo", "cloud", "serve", "--database-url", "postgres://flag@localhost/flag")
 	_, stderr := captureOutput(t, func() { cmdCloudServe() })
 
 	// It should NOT complain about missing DATABASE_URL — it should fail later
@@ -730,7 +730,7 @@ func TestCmdCloudServeHappyPath(t *testing.T) {
 	}
 	cloudServerStart = func(*cloudserver.CloudServer) error { return nil }
 
-	withArgs(t, "engram", "cloud", "serve", "--port", "9090", "--database-url", "postgres://flag@localhost/cloud")
+	withArgs(t, "mnemo", "cloud", "serve", "--port", "9090", "--database-url", "postgres://flag@localhost/cloud")
 	stdout, stderr := captureOutput(t, func() { cmdCloudServe() })
 	if stdout != "" || stderr != "" {
 		t.Fatalf("expected no output, got stdout=%q stderr=%q", stdout, stderr)
@@ -754,13 +754,13 @@ func TestCloudConfigLoadSave(t *testing.T) {
 
 	// Test save
 	cc := &CloudConfig{
-		ServerURL:    "https://engram.example.com",
+		ServerURL:    "https://mnemo.example.com",
 		Token:        "eng_test123",
 		RefreshToken: "refresh-123",
 		UserID:       "u-123",
 		Username:     "alice",
 	}
-	dataDir := filepath.Join(tmpHome, ".engram")
+	dataDir := filepath.Join(tmpHome, ".mnemo")
 	if err := saveCloudConfig(dataDir, cc); err != nil {
 		t.Fatalf("saveCloudConfig: %v", err)
 	}
@@ -787,7 +787,7 @@ func TestCloudConfigLoadSave(t *testing.T) {
 	}
 
 	// Test load with missing file
-	emptyDir := filepath.Join(t.TempDir(), ".engram")
+	emptyDir := filepath.Join(t.TempDir(), ".mnemo")
 	_, err = loadCloudConfig(emptyDir)
 	if err == nil {
 		t.Fatalf("expected error loading from nonexistent path")
@@ -801,7 +801,7 @@ func TestCmdCloudDispatchUnknown(t *testing.T) {
 	exitFunc = func(code int) { exitCalled = true }
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "cloud", "nonexistent")
+	withArgs(t, "mnemo", "cloud", "nonexistent")
 	_, stderr := captureOutput(t, func() { cmdCloud(cfg) })
 
 	if !exitCalled {
@@ -819,13 +819,13 @@ func TestCmdCloudDispatchNoSubcommand(t *testing.T) {
 	exitFunc = func(code int) { exitCalled = true }
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "cloud")
+	withArgs(t, "mnemo", "cloud")
 	_, stderr := captureOutput(t, func() { cmdCloud(cfg) })
 
 	if !exitCalled {
 		t.Fatalf("expected exit for missing cloud subcommand")
 	}
-	if !strings.Contains(stderr, "usage: engram cloud") {
+	if !strings.Contains(stderr, "usage: mnemo cloud") {
 		t.Fatalf("expected usage in stderr, got: %q", stderr)
 	}
 }
@@ -877,7 +877,7 @@ func TestCmdSearchRemoteFlag(t *testing.T) {
 
 	cfg := testConfig(t)
 
-	withArgs(t, "engram", "search", "authentication", "--remote", srv.URL, "--token", "test-token-123")
+	withArgs(t, "mnemo", "search", "authentication", "--remote", srv.URL, "--token", "test-token-123")
 	stdout, stderr := captureOutput(t, func() { cmdSearch(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -898,7 +898,7 @@ func TestCmdSearchDefaultLocalMode(t *testing.T) {
 	cfg := testConfig(t)
 	mustSeedObservation(t, cfg, "s-local", "proj-local", "note", "local-result", "local content for search", "project")
 
-	withArgs(t, "engram", "search", "local", "--project", "proj-local")
+	withArgs(t, "mnemo", "search", "local", "--project", "proj-local")
 	stdout, stderr := captureOutput(t, func() { cmdSearch(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -933,7 +933,7 @@ func TestCmdContextRemoteFlag(t *testing.T) {
 	cloudHTTPClient = func() *http.Client { return srv.Client() }
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "context", "--remote", srv.URL, "--token", "ctx-token")
+	withArgs(t, "mnemo", "context", "--remote", srv.URL, "--token", "ctx-token")
 	stdout, stderr := captureOutput(t, func() { cmdContext(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -977,7 +977,7 @@ func TestCmdCloudRegisterServerRequired(t *testing.T) {
 	t.Cleanup(func() { exitFunc = oldExit })
 	exitFunc = func(code int) { exitCalled = true }
 
-	withArgs(t, "engram", "cloud", "register")
+	withArgs(t, "mnemo", "cloud", "register")
 	_, stderr := captureOutput(t, func() { cmdCloudRegister(t.TempDir()) })
 
 	if !exitCalled {
@@ -994,7 +994,7 @@ func TestCmdCloudLoginServerRequired(t *testing.T) {
 	t.Cleanup(func() { exitFunc = oldExit })
 	exitFunc = func(code int) { exitCalled = true }
 
-	withArgs(t, "engram", "cloud", "login")
+	withArgs(t, "mnemo", "cloud", "login")
 	_, stderr := captureOutput(t, func() { cmdCloudLogin(t.TempDir()) })
 
 	if !exitCalled {
@@ -1045,9 +1045,9 @@ func TestCmdCloudRegisterIntegration(t *testing.T) {
 
 	// Override home dir for config save
 	tmpHome := t.TempDir()
-	dataDir := filepath.Join(tmpHome, ".engram")
+	dataDir := filepath.Join(tmpHome, ".mnemo")
 
-	withArgs(t, "engram", "cloud", "register", "--server", srv.URL)
+	withArgs(t, "mnemo", "cloud", "register", "--server", srv.URL)
 	stdout, stderr := captureOutput(t, func() { cmdCloudRegister(dataDir) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1103,9 +1103,9 @@ func TestCmdCloudLoginIntegration(t *testing.T) {
 	cloudHTTPClient = func() *http.Client { return srv.Client() }
 
 	tmpHome := t.TempDir()
-	dataDir := filepath.Join(tmpHome, ".engram")
+	dataDir := filepath.Join(tmpHome, ".mnemo")
 
-	withArgs(t, "engram", "cloud", "login", "--server", srv.URL)
+	withArgs(t, "mnemo", "cloud", "login", "--server", srv.URL)
 	stdout, stderr := captureOutput(t, func() { cmdCloudLogin(dataDir) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1150,7 +1150,7 @@ func TestCmdCloudAPIKey(t *testing.T) {
 
 	// Set up config with saved token
 	tmpHome := t.TempDir()
-	dataDir := filepath.Join(tmpHome, ".engram")
+	dataDir := filepath.Join(tmpHome, ".mnemo")
 
 	saveCloudConfig(dataDir, &CloudConfig{
 		ServerURL: srv.URL,
@@ -1163,7 +1163,7 @@ func TestCmdCloudAPIKey(t *testing.T) {
 	t.Cleanup(func() { cloudHTTPClient = oldClient })
 	cloudHTTPClient = func() *http.Client { return srv.Client() }
 
-	withArgs(t, "engram", "cloud", "api-key")
+	withArgs(t, "mnemo", "cloud", "api-key")
 	stdout, stderr := captureOutput(t, func() { cmdCloudAPIKey(dataDir) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1208,7 +1208,7 @@ func TestCmdCloudSyncFlagOverridesEnvAndConfigNoOp(t *testing.T) {
 	t.Setenv("ENGRAM_TOKEN", "env-token")
 
 	tmpHome := t.TempDir()
-	syncDataDir := filepath.Join(tmpHome, ".engram")
+	syncDataDir := filepath.Join(tmpHome, ".mnemo")
 	if err := saveCloudConfig(syncDataDir, &CloudConfig{ServerURL: "http://config.invalid", Token: "config-token"}); err != nil {
 		t.Fatalf("saveCloudConfig: %v", err)
 	}
@@ -1219,7 +1219,7 @@ func TestCmdCloudSyncFlagOverridesEnvAndConfigNoOp(t *testing.T) {
 
 	syncCfg := testConfig(t)
 	syncCfg.DataDir = syncDataDir
-	withArgs(t, "engram", "cloud", "sync", "--server", srv.URL, "--token", "cli-token", "--legacy")
+	withArgs(t, "mnemo", "cloud", "sync", "--server", srv.URL, "--token", "cli-token", "--legacy")
 	stdout, stderr := captureOutput(t, func() { cmdCloudSync(syncCfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got %q", stderr)
@@ -1267,7 +1267,7 @@ func TestCmdCloudStatusEnvOverridesConfig(t *testing.T) {
 	t.Setenv("ENGRAM_TOKEN", "env-token")
 
 	tmpHome := t.TempDir()
-	statusDataDir := filepath.Join(tmpHome, ".engram")
+	statusDataDir := filepath.Join(tmpHome, ".mnemo")
 	if err := saveCloudConfig(statusDataDir, &CloudConfig{ServerURL: "http://config.invalid", Token: "config-token", Username: "config-user"}); err != nil {
 		t.Fatalf("saveCloudConfig: %v", err)
 	}
@@ -1303,7 +1303,7 @@ func TestCmdCloudSyncStatusShowsState(t *testing.T) {
 	_ = s.CreateSession("test-session", "test-project", "/tmp")
 	s.Close()
 
-	withArgs(t, "engram", "cloud", "sync-status")
+	withArgs(t, "mnemo", "cloud", "sync-status")
 	stdout, stderr := captureOutput(t, func() { cmdCloudSyncStatus(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got %q", stderr)
@@ -1328,7 +1328,7 @@ func TestCmdCloudSyncStatusUninitializedStore(t *testing.T) {
 	}
 	s.Close()
 
-	withArgs(t, "engram", "cloud", "sync-status")
+	withArgs(t, "mnemo", "cloud", "sync-status")
 	stdout, _ := captureOutput(t, func() { cmdCloudSyncStatus(cfg) })
 
 	// Sync state should either show or indicate not initialized.
@@ -1374,7 +1374,7 @@ func TestCmdCloudSyncMutationEngine(t *testing.T) {
 	t.Cleanup(func() { cloudHTTPClient = oldClient })
 	cloudHTTPClient = func() *http.Client { return srv.Client() }
 
-	withArgs(t, "engram", "cloud", "sync", "--server", srv.URL, "--token", "test-token")
+	withArgs(t, "mnemo", "cloud", "sync", "--server", srv.URL, "--token", "test-token")
 	stdout, stderr := captureOutput(t, func() { cmdCloudSync(testConfig(t)) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got %q", stderr)
@@ -1385,7 +1385,7 @@ func TestCmdCloudSyncMutationEngine(t *testing.T) {
 }
 
 func TestCmdCloudDispatchSyncStatus(t *testing.T) {
-	// Verify that "engram cloud sync-status" routes to cmdCloudSyncStatus.
+	// Verify that "mnemo cloud sync-status" routes to cmdCloudSyncStatus.
 	cfg := testConfig(t)
 	s, err := store.New(cfg)
 	if err != nil {
@@ -1393,7 +1393,7 @@ func TestCmdCloudDispatchSyncStatus(t *testing.T) {
 	}
 	s.Close()
 
-	withArgs(t, "engram", "cloud", "sync-status")
+	withArgs(t, "mnemo", "cloud", "sync-status")
 	stdout, _ := captureOutput(t, func() { cmdCloudSyncStatus(cfg) })
 	if stdout == "" {
 		t.Fatal("expected output from sync-status command")
@@ -1405,7 +1405,7 @@ func TestCmdCloudDispatchSyncStatus(t *testing.T) {
 func TestCmdCloudEnrollHappyPath(t *testing.T) {
 	cfg := testConfig(t)
 
-	withArgs(t, "engram", "cloud", "enroll", "my-project")
+	withArgs(t, "mnemo", "cloud", "enroll", "my-project")
 	stdout, stderr := captureOutput(t, func() { cmdCloudEnroll(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1437,13 +1437,13 @@ func TestCmdCloudEnrollMissingArg(t *testing.T) {
 	exitFunc = func(code int) { exitCalled = true }
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "cloud", "enroll")
+	withArgs(t, "mnemo", "cloud", "enroll")
 	_, stderr := captureOutput(t, func() { cmdCloudEnroll(cfg) })
 
 	if !exitCalled {
 		t.Fatal("expected exit for missing project arg")
 	}
-	if !strings.Contains(stderr, "usage: engram cloud enroll") {
+	if !strings.Contains(stderr, "usage: mnemo cloud enroll") {
 		t.Fatalf("expected usage in stderr, got: %q", stderr)
 	}
 }
@@ -1452,7 +1452,7 @@ func TestCmdCloudEnrollIdempotent(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Enroll twice — should succeed both times.
-	withArgs(t, "engram", "cloud", "enroll", "idempotent-proj")
+	withArgs(t, "mnemo", "cloud", "enroll", "idempotent-proj")
 	stdout1, stderr1 := captureOutput(t, func() { cmdCloudEnroll(cfg) })
 	if stderr1 != "" {
 		t.Fatalf("first enroll: unexpected stderr: %q", stderr1)
@@ -1474,10 +1474,10 @@ func TestCmdCloudUnenrollHappyPath(t *testing.T) {
 	cfg := testConfig(t)
 
 	// First enroll, then unenroll.
-	withArgs(t, "engram", "cloud", "enroll", "unenroll-proj")
+	withArgs(t, "mnemo", "cloud", "enroll", "unenroll-proj")
 	captureOutput(t, func() { cmdCloudEnroll(cfg) })
 
-	withArgs(t, "engram", "cloud", "unenroll", "unenroll-proj")
+	withArgs(t, "mnemo", "cloud", "unenroll", "unenroll-proj")
 	stdout, stderr := captureOutput(t, func() { cmdCloudUnenroll(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1509,13 +1509,13 @@ func TestCmdCloudUnenrollMissingArg(t *testing.T) {
 	exitFunc = func(code int) { exitCalled = true }
 
 	cfg := testConfig(t)
-	withArgs(t, "engram", "cloud", "unenroll")
+	withArgs(t, "mnemo", "cloud", "unenroll")
 	_, stderr := captureOutput(t, func() { cmdCloudUnenroll(cfg) })
 
 	if !exitCalled {
 		t.Fatal("expected exit for missing project arg")
 	}
-	if !strings.Contains(stderr, "usage: engram cloud unenroll") {
+	if !strings.Contains(stderr, "usage: mnemo cloud unenroll") {
 		t.Fatalf("expected usage in stderr, got: %q", stderr)
 	}
 }
@@ -1524,7 +1524,7 @@ func TestCmdCloudUnenrollIdempotent(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Unenroll a project that was never enrolled — should succeed (idempotent).
-	withArgs(t, "engram", "cloud", "unenroll", "never-enrolled")
+	withArgs(t, "mnemo", "cloud", "unenroll", "never-enrolled")
 	stdout, stderr := captureOutput(t, func() { cmdCloudUnenroll(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1537,7 +1537,7 @@ func TestCmdCloudUnenrollIdempotent(t *testing.T) {
 func TestCmdCloudProjectsEmpty(t *testing.T) {
 	cfg := testConfig(t)
 
-	withArgs(t, "engram", "cloud", "projects")
+	withArgs(t, "mnemo", "cloud", "projects")
 	stdout, stderr := captureOutput(t, func() { cmdCloudProjects(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1545,7 +1545,7 @@ func TestCmdCloudProjectsEmpty(t *testing.T) {
 	if !strings.Contains(stdout, "No projects enrolled") {
 		t.Fatalf("expected empty message, got: %q", stdout)
 	}
-	if !strings.Contains(stdout, "engram cloud enroll") {
+	if !strings.Contains(stdout, "mnemo cloud enroll") {
 		t.Fatalf("expected hint about enroll command, got: %q", stdout)
 	}
 }
@@ -1554,12 +1554,12 @@ func TestCmdCloudProjectsWithEntries(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Enroll two projects.
-	withArgs(t, "engram", "cloud", "enroll", "alpha")
+	withArgs(t, "mnemo", "cloud", "enroll", "alpha")
 	captureOutput(t, func() { cmdCloudEnroll(cfg) })
-	withArgs(t, "engram", "cloud", "enroll", "bravo")
+	withArgs(t, "mnemo", "cloud", "enroll", "bravo")
 	captureOutput(t, func() { cmdCloudEnroll(cfg) })
 
-	withArgs(t, "engram", "cloud", "projects")
+	withArgs(t, "mnemo", "cloud", "projects")
 	stdout, stderr := captureOutput(t, func() { cmdCloudProjects(cfg) })
 	if stderr != "" {
 		t.Fatalf("expected no stderr, got: %q", stderr)
@@ -1576,7 +1576,7 @@ func TestCmdCloudDispatchEnrollUnenrollProjects(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Test that dispatch routes to the new commands correctly.
-	withArgs(t, "engram", "cloud", "enroll", "dispatch-proj")
+	withArgs(t, "mnemo", "cloud", "enroll", "dispatch-proj")
 	stdout, stderr := captureOutput(t, func() { cmdCloud(cfg) })
 	if stderr != "" {
 		t.Fatalf("enroll dispatch: unexpected stderr: %q", stderr)
@@ -1585,7 +1585,7 @@ func TestCmdCloudDispatchEnrollUnenrollProjects(t *testing.T) {
 		t.Fatalf("enroll dispatch: unexpected output: %q", stdout)
 	}
 
-	withArgs(t, "engram", "cloud", "projects")
+	withArgs(t, "mnemo", "cloud", "projects")
 	stdout, stderr = captureOutput(t, func() { cmdCloud(cfg) })
 	if stderr != "" {
 		t.Fatalf("projects dispatch: unexpected stderr: %q", stderr)
@@ -1594,7 +1594,7 @@ func TestCmdCloudDispatchEnrollUnenrollProjects(t *testing.T) {
 		t.Fatalf("projects dispatch: unexpected output: %q", stdout)
 	}
 
-	withArgs(t, "engram", "cloud", "unenroll", "dispatch-proj")
+	withArgs(t, "mnemo", "cloud", "unenroll", "dispatch-proj")
 	stdout, stderr = captureOutput(t, func() { cmdCloud(cfg) })
 	if stderr != "" {
 		t.Fatalf("unenroll dispatch: unexpected stderr: %q", stderr)

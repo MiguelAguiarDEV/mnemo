@@ -145,7 +145,7 @@ func (s *CloudServer) Start() error {
 
 	ln, err := listenFn("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("engram cloud server: listen %s: %w", addr, err)
+		return fmt.Errorf("mnemo cloud server: listen %s: %w", addr, err)
 	}
 	log.Printf("[engram-cloud] HTTP server listening on %s", addr)
 	return serveFn(ln, s.mux)
