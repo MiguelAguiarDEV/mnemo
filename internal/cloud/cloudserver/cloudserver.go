@@ -51,6 +51,7 @@ type CloudServer struct {
 	notifier notifications.Notifier
 	limit    *authRateLimiter
 	dashCfg  dashboard.DashboardConfig
+	costQuerier CostQuerier // optional override for testing cost handlers
 }
 
 // New creates a new CloudServer and registers all routes.
@@ -199,6 +200,7 @@ func (s *CloudServer) routes() {
 	// Cost tracking API (jarvis-dashboard)
 	s.mux.HandleFunc("GET /api/costs", s.withAuth(s.handleCosts))
 	s.mux.HandleFunc("GET /api/costs/sessions", s.withAuth(s.handleCostSessions))
+	s.mux.HandleFunc("GET /api/costs/budget", s.withAuth(s.handleCostBudget))
 
 	// Activity feed (jarvis-mvp)
 	s.mux.HandleFunc("GET /api/activity", s.withAuth(s.handleActivity))

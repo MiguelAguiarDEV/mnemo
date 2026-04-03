@@ -25,12 +25,13 @@ type DayCost struct {
 
 // BudgetReport shows spending vs budget for each provider this month.
 type BudgetReport struct {
-	ClaudeUsed   float64 `json:"claude_used"`
-	ClaudeBudget float64 `json:"claude_budget"`
-	OpenAIUsed   float64 `json:"openai_used"`
-	OpenAIBudget float64 `json:"openai_budget"`
-	ClaudePct    float64 `json:"claude_pct"`
-	OpenAIPct    float64 `json:"openai_pct"`
+	ClaudeUsed       float64 `json:"claude_used"`
+	ClaudeBudget     float64 `json:"claude_budget"`
+	OpenAIUsed       float64 `json:"openai_used"`
+	OpenAIBudget     float64 `json:"openai_budget"`
+	ClaudePct        float64 `json:"claude_pct"`
+	OpenAIPct        float64 `json:"openai_pct"`
+	BudgetProjection float64 `json:"budget_projection"`
 }
 
 // ─── Queries ────────────────────────────────────────────────────────────────
