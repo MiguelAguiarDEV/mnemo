@@ -7,7 +7,7 @@ templ LoginPage(errorMsg string) {
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>Login — Engram Cloud</title>
+			<title>Login — Mnemo Cloud</title>
 			<link rel="stylesheet" href="/dashboard/static/pico.min.css"/>
 			<link rel="stylesheet" href="/dashboard/static/styles.css"/>
 		</head>
@@ -16,8 +16,8 @@ templ LoginPage(errorMsg string) {
 				<main class="login-shell">
 					<section class="login-sidepanel">
 						<p class="section-kicker">CLOUD ACTIVE</p>
-						<h1>Engram Cloud</h1>
-						<p class="login-lead">Bring Engram memory into a shared browser workspace without losing the local-first model.</p>
+						<h1>Mnemo Cloud</h1>
+						<p class="login-lead">Bring Mnemo memory into a shared browser workspace without losing the local-first model.</p>
 						<div class="hero-console login-console">
 							<p><span class="console-key">mode</span> enterprise</p>
 							<p><span class="console-key">sync</span> local-first / cloud policy aware</p>
@@ -27,7 +27,7 @@ templ LoginPage(errorMsg string) {
 					<section class="login-container">
 						<p class="section-kicker">SIGN IN</p>
 						<h2>Sign In</h2>
-						<p class="login-copy">Use the account created with <code>engram cloud register</code> or refreshed with <code>engram cloud login</code>.</p>
+						<p class="login-copy">Use the account created with <code>mnemo cloud register</code> or refreshed with <code>mnemo cloud login</code>.</p>
 						if errorMsg != "" {
 							<div class="login-error" role="alert">
 								{ errorMsg }

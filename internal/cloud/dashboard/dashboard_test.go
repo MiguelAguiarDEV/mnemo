@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
 func strPtr(s string) *string { return &s }
@@ -45,7 +45,7 @@ func TestStaticAssets(t *testing.T) {
 	}{
 		{"/dashboard/static/htmx.min.js", "application/javascript", "htmx"},
 		{"/dashboard/static/pico.min.css", "text/css", ":root"},
-		{"/dashboard/static/styles.css", "text/css", "engram-primary"},
+		{"/dashboard/static/styles.css", "text/css", "mnemo-primary"},
 	}
 
 	for _, tt := range tests {
@@ -154,7 +154,7 @@ func TestLogoutClearsCookie(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("expected engram_session cookie to be set (for clearing)")
+		t.Fatal("expected mnemo_session cookie to be set (for clearing)")
 	}
 }
 
@@ -354,10 +354,10 @@ func TestDashboardStatsPartialEmpty(t *testing.T) {
 func TestDashboardStatsPartialWithData(t *testing.T) {
 	lastActivity := "2025-01-15T10:00:00Z"
 	stats := []cloudstore.ProjectStat{
-		{Project: "engram", SessionCount: 5, ObservationCount: 20, PromptCount: 3, LastActivity: &lastActivity},
+		{Project: "mnemo", SessionCount: 5, ObservationCount: 20, PromptCount: 3, LastActivity: &lastActivity},
 		{Project: "other-project", SessionCount: 2, ObservationCount: 10, PromptCount: 1, LastActivity: nil},
 	}
-	projects := []string{"engram", "other-project"}
+	projects := []string{"mnemo", "other-project"}
 
 	rec := httptest.NewRecorder()
 	comp := DashboardStatsPartial(stats, projects)
@@ -366,8 +366,8 @@ func TestDashboardStatsPartialWithData(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "engram") {
-		t.Fatal("expected project name 'engram'")
+	if !strings.Contains(body, "mnemo") {
+		t.Fatal("expected project name 'mnemo'")
 	}
 	if !strings.Contains(body, "other-project") {
 		t.Fatal("expected project name 'other-project'")
@@ -483,7 +483,7 @@ func TestSessionsPartialEmpty(t *testing.T) {
 // TestSessionsPartialWithData verifies sessions render with data.
 func TestSessionsPartialWithData(t *testing.T) {
 	sessions := []cloudstore.CloudSessionSummary{
-		{ID: "sess-1", Project: "engram", StartedAt: "2025-01-15T10:00:00Z", ObservationCount: 5},
+		{ID: "sess-1", Project: "mnemo", StartedAt: "2025-01-15T10:00:00Z", ObservationCount: 5},
 	}
 	rec := httptest.NewRecorder()
 	comp := SessionsPartial(sessions)
@@ -491,7 +491,7 @@ func TestSessionsPartialWithData(t *testing.T) {
 		t.Fatalf("render error: %v", err)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "engram") {
+	if !strings.Contains(body, "mnemo") {
 		t.Fatal("expected session project name")
 	}
 	if !strings.Contains(body, "Active") {
@@ -515,7 +515,7 @@ func TestPromptsPartialEmpty(t *testing.T) {
 // TestPromptsPartialWithData verifies prompts render with data.
 func TestPromptsPartialWithData(t *testing.T) {
 	prompts := []cloudstore.CloudPrompt{
-		{ID: 1, Content: "help me fix the auth", Project: "engram", CreatedAt: "2025-01-15T10:00:00Z"},
+		{ID: 1, Content: "help me fix the auth", Project: "mnemo", CreatedAt: "2025-01-15T10:00:00Z"},
 	}
 	rec := httptest.NewRecorder()
 	comp := PromptsPartial(prompts)
@@ -526,7 +526,7 @@ func TestPromptsPartialWithData(t *testing.T) {
 	if !strings.Contains(body, "help me fix the auth") {
 		t.Fatal("expected prompt content")
 	}
-	if !strings.Contains(body, "engram") {
+	if !strings.Contains(body, "mnemo") {
 		t.Fatal("expected prompt project badge")
 	}
 }
@@ -550,18 +550,18 @@ func TestProjectsPageEmpty(t *testing.T) {
 func TestProjectsPageWithData(t *testing.T) {
 	lastActivity := "2025-01-15T10:00:00Z"
 	stats := []cloudstore.ProjectStat{
-		{Project: "engram", SessionCount: 10, ObservationCount: 50, PromptCount: 5, LastActivity: &lastActivity},
+		{Project: "mnemo", SessionCount: 10, ObservationCount: 50, PromptCount: 5, LastActivity: &lastActivity},
 	}
 	rec := httptest.NewRecorder()
-	comp := ProjectsPage(stats, map[string]cloudstore.ProjectSyncControl{"engram": {Project: "engram", SyncEnabled: false, PausedReason: strPtr("Security review")}})
+	comp := ProjectsPage(stats, map[string]cloudstore.ProjectSyncControl{"mnemo": {Project: "mnemo", SyncEnabled: false, PausedReason: strPtr("Security review")}})
 	if err := comp.Render(context.Background(), rec); err != nil {
 		t.Fatalf("render error: %v", err)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "engram") {
+	if !strings.Contains(body, "mnemo") {
 		t.Fatal("expected project name")
 	}
-	if !strings.Contains(body, `href="/dashboard/projects/engram"`) {
+	if !strings.Contains(body, `href="/dashboard/projects/mnemo"`) {
 		t.Fatal("expected project detail link")
 	}
 	if !strings.Contains(body, "Sessions") {
@@ -574,16 +574,16 @@ func TestProjectsPageWithData(t *testing.T) {
 
 // TestProjectDetailPage verifies the project detail view renders all sections.
 func TestProjectDetailPage(t *testing.T) {
-	project := "engram"
-	stat := &cloudstore.ProjectStat{Project: "engram", SessionCount: 3, ObservationCount: 15, PromptCount: 2}
+	project := "mnemo"
+	stat := &cloudstore.ProjectStat{Project: "mnemo", SessionCount: 3, ObservationCount: 15, PromptCount: 2}
 
 	rec := httptest.NewRecorder()
-	comp := ProjectDetailPage(project, stat, &cloudstore.ProjectSyncControl{Project: "engram", SyncEnabled: false, PausedReason: strPtr("Security review"), UpdatedAt: "2025-01-15T10:00:00Z", UpdatedBy: strPtr("gentleman")}, nil, nil, nil)
+	comp := ProjectDetailPage(project, stat, &cloudstore.ProjectSyncControl{Project: "mnemo", SyncEnabled: false, PausedReason: strPtr("Security review"), UpdatedAt: "2025-01-15T10:00:00Z", UpdatedBy: strPtr("gentleman")}, nil, nil, nil)
 	if err := comp.Render(context.Background(), rec); err != nil {
 		t.Fatalf("render error: %v", err)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "engram") {
+	if !strings.Contains(body, "mnemo") {
 		t.Fatal("expected project name in header")
 	}
 	if !strings.Contains(body, "Recent Sessions") {
@@ -646,9 +646,9 @@ func TestContributorsPageWithData(t *testing.T) {
 }
 
 func TestPromptDetailPageRendersLinkedSession(t *testing.T) {
-	prompt := &cloudstore.CloudPrompt{ID: 7, SessionID: "sess-7", Content: "How do we sync this?", Project: "engram", CreatedAt: "2025-01-15T10:00:00Z"}
-	session := &cloudstore.CloudSession{ID: "sess-7", Project: "engram", StartedAt: "2025-01-15T09:55:00Z"}
-	related := []cloudstore.CloudPrompt{{ID: 8, SessionID: "sess-7", Content: "What about retries?", Project: "engram", CreatedAt: "2025-01-15T10:05:00Z"}}
+	prompt := &cloudstore.CloudPrompt{ID: 7, SessionID: "sess-7", Content: "How do we sync this?", Project: "mnemo", CreatedAt: "2025-01-15T10:00:00Z"}
+	session := &cloudstore.CloudSession{ID: "sess-7", Project: "mnemo", StartedAt: "2025-01-15T09:55:00Z"}
+	related := []cloudstore.CloudPrompt{{ID: 8, SessionID: "sess-7", Content: "What about retries?", Project: "mnemo", CreatedAt: "2025-01-15T10:05:00Z"}}
 	rec := httptest.NewRecorder()
 	comp := PromptDetailPage(prompt, session, related)
 	if err := comp.Render(context.Background(), rec); err != nil {
@@ -666,7 +666,7 @@ func TestPromptDetailPageRendersLinkedSession(t *testing.T) {
 func TestContributorDetailPageRendersConnectedData(t *testing.T) {
 	user := &cloudstore.CloudUser{ID: "u1", Username: "alice", Email: "alice@example.com", CreatedAt: "2025-01-15T10:00:00Z"}
 	contributor := &cloudstore.ContributorStat{UserID: "u1", Username: "alice", SessionCount: 5, ObservationCount: 20, LastSync: strPtr("2025-01-15T11:00:00Z")}
-	sessions := []cloudstore.CloudSessionSummary{{ID: "s1", Project: "engram", StartedAt: "2025-01-15T10:00:00Z", ObservationCount: 2}}
+	sessions := []cloudstore.CloudSessionSummary{{ID: "s1", Project: "mnemo", StartedAt: "2025-01-15T10:00:00Z", ObservationCount: 2}}
 	observations := []cloudstore.CloudObservation{{ID: 1, SessionID: "s1", Title: "Fix sync", Type: "bugfix", CreatedAt: "2025-01-15T10:05:00Z"}}
 	prompts := []cloudstore.CloudPrompt{{ID: 2, SessionID: "s1", Content: "How do we fix sync?", CreatedAt: "2025-01-15T10:06:00Z"}}
 	rec := httptest.NewRecorder()
@@ -746,7 +746,7 @@ func TestAdminPageRendersHealth(t *testing.T) {
 		TotalMutations: 200,
 	}
 	rec := httptest.NewRecorder()
-	comp := AdminPage(health, []cloudstore.ProjectSyncControl{{Project: "engram", SyncEnabled: false}})
+	comp := AdminPage(health, []cloudstore.ProjectSyncControl{{Project: "mnemo", SyncEnabled: false}})
 	if err := comp.Render(context.Background(), rec); err != nil {
 		t.Fatalf("render error: %v", err)
 	}
@@ -1129,7 +1129,7 @@ func TestLogoutSetsCorrectCookieAttributes(t *testing.T) {
 		}
 	}
 	if found == nil {
-		t.Fatal("expected engram_session cookie")
+		t.Fatal("expected mnemo_session cookie")
 	}
 	if found.MaxAge >= 0 {
 		t.Fatalf("expected negative MaxAge, got %d", found.MaxAge)
@@ -1232,7 +1232,7 @@ func TestBrowserPageSelectedProject(t *testing.T) {
 
 // TestSessionDetailPageRendersConnectedData verifies session detail includes observations and prompts.
 func TestSessionDetailPageRendersConnectedData(t *testing.T) {
-	session := &cloudstore.CloudSession{ID: "sess-1", Project: "engram", Directory: "/tmp/engram", StartedAt: "2025-01-15T10:00:00Z"}
+	session := &cloudstore.CloudSession{ID: "sess-1", Project: "mnemo", Directory: "/tmp/mnemo", StartedAt: "2025-01-15T10:00:00Z"}
 	observations := []cloudstore.CloudObservation{{ID: 11, SessionID: "sess-1", Title: "Fix sync", Type: "bugfix", CreatedAt: "2025-01-15T10:01:00Z"}}
 	prompts := []cloudstore.CloudPrompt{{ID: 22, SessionID: "sess-1", Content: "how do we drain backlog?", CreatedAt: "2025-01-15T10:02:00Z"}}
 
@@ -1253,7 +1253,7 @@ func TestSessionDetailPageRendersConnectedData(t *testing.T) {
 // TestObservationDetailPageLinksBackToSession verifies observation detail keeps navigation connected.
 func TestObservationDetailPageLinksBackToSession(t *testing.T) {
 	obs := &cloudstore.CloudObservation{ID: 7, SessionID: "sess-7", Type: "bugfix", Title: "Payload mismatch", Content: "Full payload body", Scope: "project", CreatedAt: "2025-01-15T10:00:00Z", UpdatedAt: "2025-01-15T10:05:00Z", RevisionCount: 1, DuplicateCount: 1}
-	session := &cloudstore.CloudSession{ID: "sess-7", Project: "engram", StartedAt: "2025-01-15T09:55:00Z"}
+	session := &cloudstore.CloudSession{ID: "sess-7", Project: "mnemo", StartedAt: "2025-01-15T09:55:00Z"}
 	related := []cloudstore.CloudObservation{{ID: 8, SessionID: "sess-7", Title: "Repair journal", Type: "decision", CreatedAt: "2025-01-15T10:06:00Z"}}
 
 	rec := httptest.NewRecorder()
@@ -1316,7 +1316,7 @@ func TestAdminPageNilHealth(t *testing.T) {
 
 func TestAdminProjectsPageShowsReasonAndUpdater(t *testing.T) {
 	rec := httptest.NewRecorder()
-	controls := []cloudstore.ProjectSyncControl{{Project: "engram", SyncEnabled: false, PausedReason: strPtr("Security hold"), UpdatedBy: strPtr("gentleman"), UpdatedAt: "2025-01-15T10:00:00Z"}}
+	controls := []cloudstore.ProjectSyncControl{{Project: "mnemo", SyncEnabled: false, PausedReason: strPtr("Security hold"), UpdatedBy: strPtr("gentleman"), UpdatedAt: "2025-01-15T10:00:00Z"}}
 	comp := AdminProjectsPage(controls)
 	if err := comp.Render(context.Background(), rec); err != nil {
 		t.Fatalf("render error: %v", err)
@@ -1335,8 +1335,8 @@ func TestAdminProjectsPageShowsReasonAndUpdater(t *testing.T) {
 
 // TestSessionCookieName verifies the constant value.
 func TestSessionCookieName(t *testing.T) {
-	if sessionCookieName != "engram_session" {
-		t.Fatalf("expected engram_session, got %s", sessionCookieName)
+	if sessionCookieName != "mnemo_session" {
+		t.Fatalf("expected mnemo_session, got %s", sessionCookieName)
 	}
 }
 

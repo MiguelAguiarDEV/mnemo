@@ -1,11 +1,11 @@
 #!/bin/bash
-# Engram — Post-compaction hook for Claude Code
+# Mnemo — Post-compaction hook for Claude Code
 #
 # When compaction happens, inject Memory Protocol + context and instruct
 # the agent to persist the compacted summary via mem_session_summary.
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+MNEMO_PORT="${MNEMO_PORT:-7437}"
+MNEMO_URL="http://127.0.0.1:${MNEMO_PORT}"
 
 # Read hook input from stdin
 INPUT=$(cat)
@@ -15,7 +15,7 @@ PROJECT=$(basename "$CWD")
 
 # Ensure session exists
 if [ -n "$SESSION_ID" ] && [ -n "$PROJECT" ]; then
-  curl -sf "${ENGRAM_URL}/sessions" \
+  curl -sf "${MNEMO_URL}/sessions" \
     -X POST \
     -H "Content-Type: application/json" \
     -d "{\"id\":\"${SESSION_ID}\",\"project\":\"${PROJECT}\",\"directory\":\"${CWD}\"}" \
@@ -23,13 +23,13 @@ if [ -n "$SESSION_ID" ] && [ -n "$PROJECT" ]; then
 fi
 
 # Fetch context from previous sessions
-CONTEXT=$(curl -sf "${ENGRAM_URL}/context?project=${PROJECT}" --max-time 3 2>/dev/null | jq -r '.context // empty')
+CONTEXT=$(curl -sf "${MNEMO_URL}/context?project=${PROJECT}" --max-time 3 2>/dev/null | jq -r '.context // empty')
 
 # Inject Memory Protocol + compaction instruction + context
 cat <<PROTOCOL
-## Engram Persistent Memory — ACTIVE PROTOCOL
+## Mnemo Persistent Memory — ACTIVE PROTOCOL
 
-You have engram memory tools (mem_save, mem_search, mem_context, mem_session_summary).
+You have mnemo memory tools (mem_save, mem_search, mem_context, mem_session_summary).
 This protocol is MANDATORY and ALWAYS ACTIVE.
 
 ### PROACTIVE SAVE — do NOT wait for user to ask

@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	engramsrv "github.com/Gentleman-Programming/engram/internal/server"
-	"github.com/Gentleman-Programming/engram/internal/setup"
-	"github.com/Gentleman-Programming/engram/internal/store"
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
-	"github.com/Gentleman-Programming/engram/internal/tui"
+	mnemosrv "github.com/MiguelAguiarDEV/mnemo/internal/server"
+	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
+	"github.com/MiguelAguiarDEV/mnemo/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -98,8 +98,8 @@ func stubRuntimeHooks(t *testing.T) {
 	oldSyncExport := syncExport
 
 	storeNew = store.New
-	newHTTPServer = func(s *store.Store, _ int) *engramsrv.Server { return engramsrv.New(s, 0) }
-	startHTTP = func(_ *engramsrv.Server) error { return nil }
+	newHTTPServer = func(s *store.Store, _ int) *mnemosrv.Server { return mnemosrv.New(s, 0) }
+	startHTTP = func(_ *mnemosrv.Server) error { return nil }
 	newMCPServer = func(s *store.Store) *mcpserver.MCPServer {
 		return mcpserver.NewMCPServer("test", "0", mcpserver.WithRecovery())
 	}
@@ -128,11 +128,11 @@ func stubRuntimeHooks(t *testing.T) {
 	storeStats = func(s *store.Store) (*store.Stats, error) { return s.Stats() }
 	storeExport = func(s *store.Store) (*store.ExportData, error) { return s.Export() }
 	jsonMarshalIndent = json.MarshalIndent
-	syncStatus = func(sy *engramsync.Syncer) (localChunks int, remoteChunks int, pendingImport int, err error) {
+	syncStatus = func(sy *mnemosync.Syncer) (localChunks int, remoteChunks int, pendingImport int, err error) {
 		return sy.Status()
 	}
-	syncImport = func(sy *engramsync.Syncer) (*engramsync.ImportResult, error) { return sy.Import() }
-	syncExport = func(sy *engramsync.Syncer, createdBy, project string) (*engramsync.SyncResult, error) {
+	syncImport = func(sy *mnemosync.Syncer) (*mnemosync.ImportResult, error) { return sy.Import() }
+	syncExport = func(sy *mnemosync.Syncer, createdBy, project string) (*mnemosync.SyncResult, error) {
 		return sy.Export(createdBy, project)
 	}
 
@@ -201,9 +201,9 @@ func TestCmdServeParsesPortAndErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stubExitWithPanic(t)
 			if tc.envPort != "" {
-				t.Setenv("ENGRAM_PORT", tc.envPort)
+				t.Setenv("MNEMO_PORT", tc.envPort)
 			} else {
-				t.Setenv("ENGRAM_PORT", "")
+				t.Setenv("MNEMO_PORT", "")
 			}
 
 			args := []string{"mnemo", "serve"}
@@ -213,11 +213,11 @@ func TestCmdServeParsesPortAndErrors(t *testing.T) {
 			withArgs(t, args...)
 
 			seenPort := -1
-			newHTTPServer = func(s *store.Store, port int) *engramsrv.Server {
+			newHTTPServer = func(s *store.Store, port int) *mnemosrv.Server {
 				seenPort = port
-				return engramsrv.New(s, 0)
+				return mnemosrv.New(s, 0)
 			}
-			startHTTP = func(_ *engramsrv.Server) error {
+			startHTTP = func(_ *mnemosrv.Server) error {
 				return tc.startErr
 			}
 
@@ -382,7 +382,7 @@ func TestCmdExportDefaultAndCmdImportErrors(t *testing.T) {
 func TestMainDispatchServeMCPAndTUI(t *testing.T) {
 	stubRuntimeHooks(t)
 
-	t.Setenv("ENGRAM_DATA_DIR", t.TempDir())
+	t.Setenv("MNEMO_DATA_DIR", t.TempDir())
 	withArgs(t, "mnemo", "serve", "8088")
 	_, stderr, recovered := captureOutputAndRecover(t, func() { main() })
 	if recovered != nil || stderr != "" {
@@ -493,7 +493,7 @@ func TestMainDispatchRemainingCommands(t *testing.T) {
 	withCwd(t, t.TempDir())
 
 	dataDir := t.TempDir()
-	t.Setenv("ENGRAM_DATA_DIR", dataDir)
+	t.Setenv("MNEMO_DATA_DIR", dataDir)
 
 	seedCfg, scErr := store.DefaultConfig()
 	if scErr != nil {
@@ -878,7 +878,7 @@ func TestCommandErrorSeamsAndUncoveredBranches(t *testing.T) {
 	t.Run("sync seam status error", func(t *testing.T) {
 		withCwd(t, t.TempDir())
 		withArgs(t, "mnemo", "sync", "--status")
-		syncStatus = func(*engramsync.Syncer) (int, int, int, error) {
+		syncStatus = func(*mnemosync.Syncer) (int, int, int, error) {
 			return 0, 0, 0, errors.New("forced status error")
 		}
 		_, stderr, recovered := captureOutputAndRecover(t, func() { cmdSync(cfg) })

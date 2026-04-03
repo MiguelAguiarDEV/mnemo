@@ -13,7 +13,7 @@ import (
 // ─── Built-in Check Factories ────────────────────────────────────────────
 
 // NewServerHealthCheck returns a check that GETs the given URL and expects 200.
-// Used to verify the JARVIS/engram HTTP server is responding.
+// Used to verify the JARVIS/mnemo HTTP server is responding.
 func NewServerHealthCheck(url string) Check {
 	return Check{
 		Name:     "server_health",

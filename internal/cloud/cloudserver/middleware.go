@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
 )
 
 // contextKey is an unexported type for context keys, preventing collisions.

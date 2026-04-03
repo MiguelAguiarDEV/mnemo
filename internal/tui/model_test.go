@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/setup"
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 type testFixture struct {
@@ -31,10 +31,10 @@ func newTestFixture(t *testing.T) testFixture {
 	}
 	t.Cleanup(func() { _ = s.Close() })
 
-	if err := s.CreateSession("session-1", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("session-1", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session-1: %v", err)
 	}
-	if err := s.CreateSession("session-2", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("session-2", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session-2: %v", err)
 	}
 
@@ -43,7 +43,7 @@ func newTestFixture(t *testing.T) testFixture {
 		Type:      "bugfix",
 		Title:     "Needle observation",
 		Content:   "needle content for deterministic search",
-		Project:   "engram",
+		Project:   "mnemo",
 		Scope:     "project",
 	})
 	if err != nil {
@@ -55,7 +55,7 @@ func newTestFixture(t *testing.T) testFixture {
 		Type:      "decision",
 		Title:     "Second observation",
 		Content:   "timeline sibling",
-		Project:   "engram",
+		Project:   "mnemo",
 		Scope:     "project",
 	})
 	if err != nil {

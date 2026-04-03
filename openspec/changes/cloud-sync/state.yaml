@@ -1,6 +1,6 @@
 change: "cloud-sync"
 phase: "apply-complete"
-artifact_store: "engram+openspec"
+artifact_store: "mnemo+openspec"
 artifacts:
   proposal: true
   specs: true

@@ -345,7 +345,7 @@ func TestCreateTaskTool_StoreError(t *testing.T) {
 func TestListTasksTool_Success(t *testing.T) {
 	store := &mockTaskStore{tasks: []TaskEntry{
 		{ID: 1, Title: "Task A", Status: "open", Priority: "high", Project: "jarvis"},
-		{ID: 2, Title: "Task B", Status: "open", Priority: "medium", Project: "engram"},
+		{ID: 2, Title: "Task B", Status: "open", Priority: "medium", Project: "mnemo"},
 	}}
 	tool := NewListTasksTool(store, "user-1")
 
@@ -373,7 +373,7 @@ func TestListTasksTool_Success(t *testing.T) {
 func TestListTasksTool_FilterByProject(t *testing.T) {
 	store := &mockTaskStore{tasks: []TaskEntry{
 		{ID: 1, Title: "Task A", Status: "open", Priority: "high", Project: "jarvis"},
-		{ID: 2, Title: "Task B", Status: "open", Priority: "medium", Project: "engram"},
+		{ID: 2, Title: "Task B", Status: "open", Priority: "medium", Project: "mnemo"},
 	}}
 	tool := NewListTasksTool(store, "user-1")
 
@@ -1008,7 +1008,7 @@ func TestDelegateTool_FallbackToSync(t *testing.T) {
 func TestListJobsTool_Success(t *testing.T) {
 	lister := &mockJobLister{jobs: []*Job{
 		{ID: "1", Task: "fix bug", Project: "jarvis", Status: JobStatusSuccess},
-		{ID: "2", Task: "review code", Project: "engram", Status: JobStatusRunning},
+		{ID: "2", Task: "review code", Project: "mnemo", Status: JobStatusRunning},
 	}}
 	tool := NewListJobsTool(lister)
 

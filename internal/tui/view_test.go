@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/setup"
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 func TestTruncateStr(t *testing.T) {
@@ -36,7 +36,7 @@ func TestTruncateStr(t *testing.T) {
 func TestRenderObservationListItem(t *testing.T) {
 	m := New(nil, "")
 	m.Cursor = 1
-	project := "engram"
+	project := "mnemo"
 
 	line := m.renderObservationListItem(
 		1,
@@ -57,7 +57,7 @@ func TestRenderObservationListItem(t *testing.T) {
 	if !strings.Contains(line, "content line 1 content line 2") {
 		t.Fatal("content preview should be rendered on second line")
 	}
-	if !strings.Contains(line, "engram") {
+	if !strings.Contains(line, "mnemo") {
 		t.Fatal("project label should be rendered when project is set")
 	}
 }
@@ -203,7 +203,7 @@ func TestViewObservationDetailTimelineSessionsAndSessionDetail(t *testing.T) {
 	}
 
 	tool := "bash"
-	project := "engram"
+	project := "mnemo"
 	m.SelectedObservation = &store.Observation{
 		ID:        42,
 		Type:      "decision",
@@ -232,7 +232,7 @@ func TestViewObservationDetailTimelineSessionsAndSessionDetail(t *testing.T) {
 		Focus:        store.Observation{ID: 42, Type: "decision", Title: "focus", Content: "focus content"},
 		Before:       []store.TimelineEntry{{ID: 40, Type: "bugfix", Title: "before title"}},
 		After:        []store.TimelineEntry{{ID: 43, Type: "pattern", Title: "after title"}},
-		SessionInfo:  &store.Session{ID: "session-1", Project: "engram"},
+		SessionInfo:  &store.Session{ID: "session-1", Project: "mnemo"},
 		TotalInRange: 3,
 	}
 	out = m.viewTimeline()
@@ -249,13 +249,13 @@ func TestViewObservationDetailTimelineSessionsAndSessionDetail(t *testing.T) {
 	summary := "session summary"
 	m.Height = 14
 	m.Sessions = []store.SessionSummary{
-		{ID: "s1", Project: "engram", StartedAt: "2026-01-01", Summary: &summary, ObservationCount: 2},
-		{ID: "s2", Project: "engram", StartedAt: "2026-01-02", ObservationCount: 1},
-		{ID: "s3", Project: "engram", StartedAt: "2026-01-03", ObservationCount: 1},
-		{ID: "s4", Project: "engram", StartedAt: "2026-01-04", ObservationCount: 1},
-		{ID: "s5", Project: "engram", StartedAt: "2026-01-05", ObservationCount: 1},
-		{ID: "s6", Project: "engram", StartedAt: "2026-01-06", ObservationCount: 1},
-		{ID: "s7", Project: "engram", StartedAt: "2026-01-07", ObservationCount: 1},
+		{ID: "s1", Project: "mnemo", StartedAt: "2026-01-01", Summary: &summary, ObservationCount: 2},
+		{ID: "s2", Project: "mnemo", StartedAt: "2026-01-02", ObservationCount: 1},
+		{ID: "s3", Project: "mnemo", StartedAt: "2026-01-03", ObservationCount: 1},
+		{ID: "s4", Project: "mnemo", StartedAt: "2026-01-04", ObservationCount: 1},
+		{ID: "s5", Project: "mnemo", StartedAt: "2026-01-05", ObservationCount: 1},
+		{ID: "s6", Project: "mnemo", StartedAt: "2026-01-06", ObservationCount: 1},
+		{ID: "s7", Project: "mnemo", StartedAt: "2026-01-07", ObservationCount: 1},
 	}
 	out = m.viewSessions()
 	if !strings.Contains(out, "Sessions") || !strings.Contains(out, "showing 1-6 of 7") {
@@ -303,7 +303,7 @@ func TestViewRouterCoversAllScreens(t *testing.T) {
 	m.RecentObservations = []store.Observation{{ID: 1, Type: "bugfix", Title: "t", Content: "c", CreatedAt: "now"}}
 	m.SelectedObservation = &store.Observation{ID: 1, Type: "bugfix", Title: "t", Content: "c", CreatedAt: "now", SessionID: "s1"}
 	m.Timeline = &store.TimelineResult{Focus: store.Observation{ID: 1, Type: "bugfix", Title: "t", Content: "c"}, TotalInRange: 1}
-	m.Sessions = []store.SessionSummary{{ID: "s1", Project: "engram", StartedAt: "now", ObservationCount: 1}}
+	m.Sessions = []store.SessionSummary{{ID: "s1", Project: "mnemo", StartedAt: "now", ObservationCount: 1}}
 	m.SelectedSessionIdx = 0
 	m.SessionObservations = []store.Observation{{ID: 1, Type: "bugfix", Title: "t", Content: "c", CreatedAt: "now"}}
 	m.SetupAgents = []setup.Agent{{Name: "opencode", Description: "OpenCode", InstallDir: "/tmp"}}

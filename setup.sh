@@ -20,8 +20,8 @@ link_skills() {
   mkdir -p "${target_dir}"
 
   # Remove legacy aggregate link if present.
-  if [ -L "${target_dir}/engram" ]; then
-    rm -f "${target_dir}/engram"
+  if [ -L "${target_dir}/mnemo" ]; then
+    rm -f "${target_dir}/mnemo"
   fi
 
   for source_path in "${SKILLS_SOURCE}"/*; do

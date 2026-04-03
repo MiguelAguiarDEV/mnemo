@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
 )
 
 // sessionCookieName is the name of the HTTP-only cookie that stores the JWT

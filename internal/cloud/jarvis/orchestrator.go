@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
-	"github.com/Gentleman-Programming/engram/internal/morpheus"
-	"github.com/Gentleman-Programming/engram/internal/prometheus"
-	"github.com/Gentleman-Programming/engram/internal/atlas"
-	"github.com/Gentleman-Programming/engram/internal/sentinel"
-	"github.com/Gentleman-Programming/engram/internal/athena"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
+	"github.com/MiguelAguiarDEV/mnemo/internal/morpheus"
+	"github.com/MiguelAguiarDEV/mnemo/internal/prometheus"
+	"github.com/MiguelAguiarDEV/mnemo/internal/atlas"
+	"github.com/MiguelAguiarDEV/mnemo/internal/sentinel"
+	"github.com/MiguelAguiarDEV/mnemo/internal/athena"
 )
 
 // ─── Store Interface ───────────────────────────────────────────────────────
@@ -267,12 +267,12 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	o.dispatcher.Register(athena.NewNotifyTool(&orchestratorNotifier{notifier: o.notifier}))
 
 	// Memory tools
-	engramBin := os.Getenv("ENGRAM_BIN")
-	if engramBin == "" {
-		engramBin = "mnemo"
+	mnemoBin := os.Getenv("MNEMO_BIN")
+	if mnemoBin == "" {
+		mnemoBin = "mnemo"
 	}
-	o.dispatcher.Register(athena.NewSearchMemoryTool(engramBin, nil))
-	o.dispatcher.Register(athena.NewSaveMemoryTool(engramBin, nil))
+	o.dispatcher.Register(athena.NewSearchMemoryTool(mnemoBin, nil))
+	o.dispatcher.Register(athena.NewSaveMemoryTool(mnemoBin, nil))
 
 	// Filesystem tools (read_file, write_file, edit_file)
 	allowedDirs := []string{os.Getenv("HOME") + "/projects", "/tmp"}
@@ -305,9 +305,9 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	if traceURL == "" {
 		traceURL = "http://127.0.0.1:8080/traces/tool-call"
 	}
-	traceToken := os.Getenv("ENGRAM_CLOUD_API_KEY")
+	traceToken := os.Getenv("MNEMO_CLOUD_API_KEY")
 	if traceToken == "" {
-		traceToken = os.Getenv("ENGRAM_API_KEY")
+		traceToken = os.Getenv("MNEMO_API_KEY")
 	}
 
 	o.tracingDispatcher = athena.NewTracingDispatcher(o.dispatcher, athena.TracingConfig{
@@ -330,9 +330,9 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 // It runs in a goroutine and checks every hour if consolidation is needed.
 // Call this from the cloud server startup after creating the orchestrator.
 func (o *Orchestrator) StartDream(ctx context.Context) {
-	engramBin := os.Getenv("ENGRAM_BIN")
-	if engramBin == "" {
-		engramBin = "mnemo"
+	mnemoBin := os.Getenv("MNEMO_BIN")
+	if mnemoBin == "" {
+		mnemoBin = "mnemo"
 	}
 
 	lockPath := filepath.Join(os.TempDir(), "mnemo-consolidate.lock")
@@ -341,7 +341,7 @@ func (o *Orchestrator) StartDream(ctx context.Context) {
 	}
 
 	consolidator := morpheus.New(
-		morpheus.WithEngramBin(engramBin),
+		morpheus.WithMnemoBin(mnemoBin),
 		morpheus.WithLockPath(lockPath),
 		morpheus.WithLogger(o.logger),
 	)
@@ -349,7 +349,7 @@ func (o *Orchestrator) StartDream(ctx context.Context) {
 	go consolidator.RunBackground(ctx)
 	o.logger.Info("dream: background memory consolidation started",
 		"lock_path", lockPath,
-		"engram_bin", engramBin,
+		"mnemo_bin", mnemoBin,
 	)
 }
 
@@ -373,16 +373,16 @@ func (o *Orchestrator) StartTicker(ctx context.Context) {
 	}
 
 	// Build the dream consolidator for the memory check.
-	engramBin := os.Getenv("ENGRAM_BIN")
-	if engramBin == "" {
-		engramBin = "mnemo"
+	mnemoBin := os.Getenv("MNEMO_BIN")
+	if mnemoBin == "" {
+		mnemoBin = "mnemo"
 	}
 	lockPath := filepath.Join(os.TempDir(), "mnemo-consolidate.lock")
 	if d := os.Getenv("JARVIS_DREAM_LOCK"); d != "" {
 		lockPath = d
 	}
 	consolidator := morpheus.New(
-		morpheus.WithEngramBin(engramBin),
+		morpheus.WithMnemoBin(mnemoBin),
 		morpheus.WithLockPath(lockPath),
 		morpheus.WithLogger(o.logger),
 	)

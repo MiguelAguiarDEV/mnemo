@@ -20,18 +20,18 @@
 
 ---
 
-> **engram** `/ˈen.ɡræm/` — *neuroscience*: the physical trace of a memory in the brain.
+> **mnemo** `/ˈen.ɡræm/` — *neuroscience*: the physical trace of a memory in the brain.
 
-Your AI coding agent forgets everything when the session ends. Engram gives it a brain.
+Your AI coding agent forgets everything when the session ends. Mnemo gives it a brain.
 
 A **Go binary** with SQLite + FTS5 full-text search, exposed via CLI, HTTP API, MCP server, and an interactive TUI. Works with **any agent** that supports MCP — Claude Code, OpenCode, Gemini CLI, Codex, VS Code (Copilot), Antigravity, Cursor, Windsurf, or anything else.
 
 ```
 Agent (Claude Code / OpenCode / Gemini CLI / Codex / VS Code / Antigravity / ...)
     ↓ MCP stdio
-Engram (single Go binary)
+Mnemo (single Go binary)
     ↓
-SQLite + FTS5 (~/.engram/engram.db)
+SQLite + FTS5 (~/.mnemo/mnemo.db)
 ```
 
 ## Quick Start
@@ -39,31 +39,31 @@ SQLite + FTS5 (~/.engram/engram.db)
 ### Install via Homebrew (macOS / Linux)
 
 ```bash
-brew install gentleman-programming/tap/engram
+brew install MiguelAguiarDEV/tap/mnemo
 ```
 
 Upgrade to latest:
 
 ```bash
-brew update && brew upgrade engram
+brew update && brew upgrade mnemo
 ```
 
-> **Migrating from Cask?** If you installed engram before v1.0.1, it was distributed as a Cask. Uninstall first, then reinstall:
+> **Migrating from Cask?** If you installed mnemo before v1.0.1, it was distributed as a Cask. Uninstall first, then reinstall:
 > ```bash
-> brew uninstall --cask engram 2>/dev/null; brew install gentleman-programming/tap/engram
+> brew uninstall --cask mnemo 2>/dev/null; brew install MiguelAguiarDEV/tap/mnemo
 > ```
 
 ### Install on Windows
 
 **Option A: Download the binary (recommended)**
 
-1. Go to [GitHub Releases](https://github.com/Gentleman-Programming/engram/releases)
-2. Download `engram_<version>_windows_amd64.zip` (or `arm64` for ARM devices)
-3. Extract `engram.exe` to a folder in your `PATH` (e.g. `C:\Users\<you>\bin\`)
+1. Go to [GitHub Releases](https://github.com/MiguelAguiarDEV/mnemo/releases)
+2. Download `mnemo_<version>_windows_amd64.zip` (or `arm64` for ARM devices)
+3. Extract `mnemo.exe` to a folder in your `PATH` (e.g. `C:\Users\<you>\bin\`)
 
 ```powershell
 # Example: extract and add to PATH (PowerShell)
-Expand-Archive engram_*_windows_amd64.zip -DestinationPath "$env:USERPROFILE\bin"
+Expand-Archive mnemo_*_windows_amd64.zip -DestinationPath "$env:USERPROFILE\bin"
 # Add to PATH permanently (run once):
 [Environment]::SetEnvironmentVariable("Path", "$env:USERPROFILE\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
 ```
@@ -71,69 +71,69 @@ Expand-Archive engram_*_windows_amd64.zip -DestinationPath "$env:USERPROFILE\bin
 **Option B: Install from source**
 
 ```powershell
-git clone https://github.com/Gentleman-Programming/engram.git
-cd engram
-go install ./cmd/engram
-# Binary goes to %GOPATH%\bin\engram.exe (typically %USERPROFILE%\go\bin\)
+git clone https://github.com/MiguelAguiarDEV/mnemo.git
+cd mnemo
+go install ./cmd/mnemo
+# Binary goes to %GOPATH%\bin\mnemo.exe (typically %USERPROFILE%\go\bin\)
 
-# Optional: build with version stamp (otherwise `engram version` shows "dev")
+# Optional: build with version stamp (otherwise `mnemo version` shows "dev")
 $v = git describe --tags --always
-go build -ldflags="-X main.version=local-$v" -o engram.exe ./cmd/engram
+go build -ldflags="-X main.version=local-$v" -o mnemo.exe ./cmd/mnemo
 ```
 
 > **Windows notes:**
-> - Data is stored in `%USERPROFILE%\.engram\engram.db`
-> - Override with `ENGRAM_DATA_DIR` environment variable
+> - Data is stored in `%USERPROFILE%\.mnemo\mnemo.db`
+> - Override with `MNEMO_DATA_DIR` environment variable
 > - All core features work natively: CLI, MCP server, TUI, HTTP API, Git Sync
 > - No WSL required for the core binary — it's a native Windows executable
 
 ### Install from source (macOS / Linux)
 
 ```bash
-git clone https://github.com/Gentleman-Programming/engram.git
-cd engram
-go install ./cmd/engram
+git clone https://github.com/MiguelAguiarDEV/mnemo.git
+cd mnemo
+go install ./cmd/mnemo
 
-# Optional: build with version stamp (otherwise `engram version` shows "dev")
-go build -ldflags="-X main.version=local-$(git describe --tags --always)" -o engram ./cmd/engram
+# Optional: build with version stamp (otherwise `mnemo version` shows "dev")
+go build -ldflags="-X main.version=local-$(git describe --tags --always)" -o mnemo ./cmd/mnemo
 ```
 
 ### Download binary (all platforms)
 
-Grab the latest release for your platform from [GitHub Releases](https://github.com/Gentleman-Programming/engram/releases).
+Grab the latest release for your platform from [GitHub Releases](https://github.com/MiguelAguiarDEV/mnemo/releases).
 
 | Platform | File |
 |----------|------|
-| macOS (Apple Silicon) | `engram_<version>_darwin_arm64.tar.gz` |
-| macOS (Intel) | `engram_<version>_darwin_amd64.tar.gz` |
-| Linux (x86_64) | `engram_<version>_linux_amd64.tar.gz` |
-| Linux (ARM64) | `engram_<version>_linux_arm64.tar.gz` |
-| Windows (x86_64) | `engram_<version>_windows_amd64.zip` |
-| Windows (ARM64) | `engram_<version>_windows_arm64.zip` |
+| macOS (Apple Silicon) | `mnemo_<version>_darwin_arm64.tar.gz` |
+| macOS (Intel) | `mnemo_<version>_darwin_amd64.tar.gz` |
+| Linux (x86_64) | `mnemo_<version>_linux_amd64.tar.gz` |
+| Linux (ARM64) | `mnemo_<version>_linux_arm64.tar.gz` |
+| Windows (x86_64) | `mnemo_<version>_windows_amd64.zip` |
+| Windows (ARM64) | `mnemo_<version>_windows_arm64.zip` |
 
 Then set up your agent's plugin:
 
 ```bash
 # Claude Code — via marketplace
-claude plugin marketplace add Gentleman-Programming/engram
-claude plugin install engram
+claude plugin marketplace add MiguelAguiarDEV/mnemo
+claude plugin install mnemo
 
-# OpenCode — via engram setup
-engram setup opencode
+# OpenCode — via mnemo setup
+mnemo setup opencode
 
 # Gemini CLI — MCP auto-registration
-engram setup gemini-cli
+mnemo setup gemini-cli
 
 # Codex — MCP auto-registration
-engram setup codex
+mnemo setup codex
 
 # VS Code — add MCP server via CLI
-code --add-mcp "{\"name\":\"engram\",\"command\":\"engram\",\"args\":[\"mcp\"]}"
+code --add-mcp "{\"name\":\"mnemo\",\"command\":\"mnemo\",\"args\":[\"mcp\"]}"
 
 # Antigravity — add via MCP Store (see Agent Setup below)
 
 # Or interactive (asks which agent)
-engram setup
+mnemo setup
 ```
 
 See [Agent Setup](#agent-setup) for manual configuration or other agents (VS Code, Antigravity, Cursor, Windsurf).
@@ -148,9 +148,9 @@ That's it. No Node.js, no Python, no Bun, no Docker, no ChromaDB, no vector data
   <em>The agent proactively calls <code>mem_save</code> after significant work — structured, searchable, no noise.</em>
 </p>
 
-Engram trusts the **agent** to decide what's worth remembering — not a firehose of raw tool calls.
+Mnemo trusts the **agent** to decide what's worth remembering — not a firehose of raw tool calls.
 
-### The Agent Saves, Engram Stores
+### The Agent Saves, Mnemo Stores
 
 ```
 1. Agent completes significant work (bugfix, architecture decision, etc.)
@@ -158,7 +158,7 @@ Engram trusts the **agent** to decide what's worth remembering — not a firehos
    - title: "Fixed N+1 query in user list"
    - type: "bugfix"
    - content: What/Why/Where/Learned format
-3. Engram persists to SQLite with FTS5 indexing
+3. Mnemo persists to SQLite with FTS5 indexing
 4. Next session: agent searches memory, gets relevant context
 ```
 
@@ -231,29 +231,29 @@ Different topics should use different keys (e.g. `architecture/auth-model` vs `b
 
 ## Agent Setup
 
-Engram works with **any MCP-compatible agent**. Add it to your agent's MCP config:
+Mnemo works with **any MCP-compatible agent**. Add it to your agent's MCP config:
 
 ### OpenCode
 
-> **Prerequisite**: Install the `engram` binary first (via [Homebrew](#install-via-homebrew-macOS--linux), [Windows binary](#install-on-windows), [binary download](#download-binary-all-platforms), or [source](#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking.
+> **Prerequisite**: Install the `mnemo` binary first (via [Homebrew](#install-via-homebrew-macOS--linux), [Windows binary](#install-on-windows), [binary download](#download-binary-all-platforms), or [source](#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking.
 
 **Recommended: Full setup with one command** — installs the plugin AND registers the MCP server in `opencode.json` automatically:
 
 ```bash
-engram setup opencode
+mnemo setup opencode
 ```
 
 This does two things:
-1. Copies the plugin to `~/.config/opencode/plugins/engram.ts` (session tracking, Memory Protocol, compaction recovery)
-2. Adds the `engram` MCP server entry to your `opencode.json` (the 13 memory tools)
+1. Copies the plugin to `~/.config/opencode/plugins/mnemo.ts` (session tracking, Memory Protocol, compaction recovery)
+2. Adds the `mnemo` MCP server entry to your `opencode.json` (the 13 memory tools)
 
 The plugin also needs the HTTP server running for session tracking:
 
 ```bash
-engram serve &
+mnemo serve &
 ```
 
-> **Windows**: On Windows, `engram setup opencode` writes to `%APPDATA%\opencode\plugins\` and `%APPDATA%\opencode\opencode.json` automatically. To run the server in the background: `Start-Process engram -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `engram serve` in a separate terminal.
+> **Windows**: On Windows, `mnemo setup opencode` writes to `%APPDATA%\opencode\plugins\` and `%APPDATA%\opencode\opencode.json` automatically. To run the server in the background: `Start-Process mnemo -ArgumentList "serve" -WindowStyle Hidden` (PowerShell) or just run `mnemo serve` in a separate terminal.
 
 **Alternative: Manual MCP-only setup** (no plugin, just the 13 memory tools):
 
@@ -262,9 +262,9 @@ Add to your `opencode.json` (global: `~/.config/opencode/opencode.json` or proje
 ```json
 {
   "mcp": {
-    "engram": {
+    "mnemo": {
       "type": "local",
-      "command": ["engram", "mcp"],
+      "command": ["mnemo", "mcp"],
       "enabled": true
     }
   }
@@ -275,24 +275,24 @@ See [OpenCode Plugin](#opencode-plugin) for details on what the plugin provides 
 
 ### Claude Code
 
-> **Prerequisite**: Install the `engram` binary first (via [Homebrew](#install-via-homebrew-macOS--linux), [Windows binary](#install-on-windows), [binary download](#download-binary-all-platforms), or [source](#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking scripts.
+> **Prerequisite**: Install the `mnemo` binary first (via [Homebrew](#install-via-homebrew-macOS--linux), [Windows binary](#install-on-windows), [binary download](#download-binary-all-platforms), or [source](#install-from-source-macos--linux)). The plugin needs it for the MCP server and session tracking scripts.
 
 **Option A: Plugin via marketplace (recommended)** — full session management, auto-import, compaction recovery, and Memory Protocol skill:
 
 ```bash
-claude plugin marketplace add Gentleman-Programming/engram
-claude plugin install engram
+claude plugin marketplace add MiguelAguiarDEV/mnemo
+claude plugin install mnemo
 ```
 
 That's it. The plugin registers the MCP server, hooks, and Memory Protocol skill automatically.
 
-**Option B: Plugin via `engram setup`** — same plugin, installed from the embedded binary:
+**Option B: Plugin via `mnemo setup`** — same plugin, installed from the embedded binary:
 
 ```bash
-engram setup claude-code
+mnemo setup claude-code
 ```
 
-During setup, you'll be asked whether to add engram tools to `~/.claude/settings.json` permissions allowlist — this prevents Claude Code from prompting for confirmation on every memory operation.
+During setup, you'll be asked whether to add mnemo tools to `~/.claude/settings.json` permissions allowlist — this prevents Claude Code from prompting for confirmation on every memory operation.
 
 **Option C: Bare MCP** — just the 13 memory tools, no session management:
 
@@ -301,15 +301,15 @@ Add to your `.claude/settings.json` (project) or `~/.claude/settings.json` (glob
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-With bare MCP, add a [Surviving Compaction](#surviving-compaction-recommended) prompt to your `CLAUDE.md` so the agent remembers to use Engram after context resets.
+With bare MCP, add a [Surviving Compaction](#surviving-compaction-recommended) prompt to your `CLAUDE.md` so the agent remembers to use Mnemo after context resets.
 
 > **Windows note:** The Claude Code plugin hooks use bash scripts. On Windows, Claude Code runs hooks through Git Bash (bundled with [Git for Windows](https://gitforwindows.org/)) or WSL. If hooks don't fire, ensure `bash` is available in your `PATH`. Alternatively, use **Option C (Bare MCP)** which works natively on Windows without any shell dependency.
 
@@ -320,15 +320,15 @@ See [Claude Code Plugin](#claude-code-plugin) for details on what the plugin pro
 Recommended: one command to set up MCP + compaction recovery instructions:
 
 ```bash
-engram setup gemini-cli
+mnemo setup gemini-cli
 ```
 
-`engram setup gemini-cli` now does three things:
-- Registers `mcpServers.engram` in `~/.gemini/settings.json` (Windows: `%APPDATA%\gemini\settings.json`)
-- Writes `~/.gemini/system.md` with the Engram Memory Protocol (includes post-compaction recovery)
+`mnemo setup gemini-cli` now does three things:
+- Registers `mcpServers.mnemo` in `~/.gemini/settings.json` (Windows: `%APPDATA%\gemini\settings.json`)
+- Writes `~/.gemini/system.md` with the Mnemo Memory Protocol (includes post-compaction recovery)
 - Ensures `~/.gemini/.env` contains `GEMINI_SYSTEM_MD=1` so Gemini actually loads that system prompt
 
-> `engram setup gemini-cli` automatically writes the full Memory Protocol to `~/.gemini/system.md`, so the agent knows exactly when to save, search, and close sessions. No additional configuration needed.
+> `mnemo setup gemini-cli` automatically writes the full Memory Protocol to `~/.gemini/system.md`, so the agent knows exactly when to save, search, and close sessions. No additional configuration needed.
 
 Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/settings.json` (project); on Windows: `%APPDATA%\gemini\settings.json`:
 
@@ -336,8 +336,8 @@ Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/s
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
@@ -347,7 +347,7 @@ Manual alternative: add to your `~/.gemini/settings.json` (global) or `.gemini/s
 Or via the CLI:
 
 ```bash
-gemini mcp add engram engram mcp
+gemini mcp add mnemo mnemo mcp
 ```
 
 ### Codex
@@ -355,24 +355,24 @@ gemini mcp add engram engram mcp
 Recommended: one command to set up MCP + compaction recovery instructions:
 
 ```bash
-engram setup codex
+mnemo setup codex
 ```
 
-`engram setup codex` now does three things:
-- Registers `[mcp_servers.engram]` in `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`)
-- Writes `~/.codex/engram-instructions.md` with the Engram Memory Protocol
-- Writes `~/.codex/engram-compact-prompt.md` and points `experimental_compact_prompt_file` to it, so compaction output includes a required memory-save instruction
+`mnemo setup codex` now does three things:
+- Registers `[mcp_servers.mnemo]` in `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`)
+- Writes `~/.codex/mnemo-instructions.md` with the Mnemo Memory Protocol
+- Writes `~/.codex/mnemo-compact-prompt.md` and points `experimental_compact_prompt_file` to it, so compaction output includes a required memory-save instruction
 
-> `engram setup codex` automatically writes the full Memory Protocol to `~/.codex/engram-instructions.md` and a compaction recovery prompt to `~/.codex/engram-compact-prompt.md`. No additional configuration needed.
+> `mnemo setup codex` automatically writes the full Memory Protocol to `~/.codex/mnemo-instructions.md` and a compaction recovery prompt to `~/.codex/mnemo-compact-prompt.md`. No additional configuration needed.
 
 Manual alternative: add to your `~/.codex/config.toml` (Windows: `%APPDATA%\codex\config.toml`):
 
 ```toml
-model_instructions_file = "~/.codex/engram-instructions.md"
-experimental_compact_prompt_file = "~/.codex/engram-compact-prompt.md"
+model_instructions_file = "~/.codex/mnemo-instructions.md"
+experimental_compact_prompt_file = "~/.codex/mnemo-compact-prompt.md"
 
-[mcp_servers.engram]
-command = "engram"
+[mcp_servers.mnemo]
+command = "mnemo"
 args = ["mcp"]
 ```
 
@@ -387,8 +387,8 @@ Add to `.vscode/mcp.json` in your project:
 ```json
 {
   "servers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
@@ -399,7 +399,7 @@ Add to `.vscode/mcp.json` in your project:
 
 1. Open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
 2. Run **MCP: Open User Configuration**
-3. Add the same `engram` server entry above to VS Code User `mcp.json`:
+3. Add the same `mnemo` server entry above to VS Code User `mcp.json`:
    - macOS: `~/Library/Application Support/Code/User/mcp.json`
    - Linux: `~/.config/Code/User/mcp.json`
    - Windows: `%APPDATA%\Code\User\mcp.json`
@@ -407,12 +407,12 @@ Add to `.vscode/mcp.json` in your project:
 **Option C: CLI one-liner:**
 
 ```bash
-code --add-mcp "{\"name\":\"engram\",\"command\":\"engram\",\"args\":[\"mcp\"]}"
+code --add-mcp "{\"name\":\"mnemo\",\"command\":\"mnemo\",\"args\":[\"mcp\"]}"
 ```
 
 > **Using Claude Code extension in VS Code?** The Claude Code extension runs inside VS Code but uses its own MCP config. Follow the [Claude Code](#claude-code) instructions above — the `.claude/settings.json` config works whether you use Claude Code as a CLI or as a VS Code extension.
 
-> **Windows**: Make sure `engram.exe` is in your `PATH`. VS Code resolves MCP commands from the system PATH.
+> **Windows**: Make sure `mnemo.exe` is in your `PATH`. VS Code resolves MCP commands from the system PATH.
 
 **Adding the Memory Protocol** (recommended — teaches the agent when to save and search memories):
 
@@ -421,9 +421,9 @@ Without the Memory Protocol, the agent has the tools but doesn't know WHEN to us
 **For Copilot:** Create a `.instructions.md` file in the VS Code User `prompts/` folder and paste the Memory Protocol from [DOCS.md](DOCS.md#memory-protocol-full-text).
 
 Recommended file path:
-- macOS: `~/Library/Application Support/Code/User/prompts/engram-memory.instructions.md`
-- Linux: `~/.config/Code/User/prompts/engram-memory.instructions.md`
-- Windows: `%APPDATA%\Code\User\prompts\engram-memory.instructions.md`
+- macOS: `~/Library/Application Support/Code/User/prompts/mnemo-memory.instructions.md`
+- Linux: `~/.config/Code/User/prompts/mnemo-memory.instructions.md`
+- Windows: `%APPDATA%\Code\User\prompts\mnemo-memory.instructions.md`
 
 **For any VS Code chat extension:** Add the Memory Protocol text to your extension's custom instructions or system prompt configuration.
 
@@ -444,8 +444,8 @@ See [Surviving Compaction](#surviving-compaction-recommended) for the minimal ve
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
@@ -465,15 +465,15 @@ Add to your `.cursor/mcp.json` (same path on all platforms — it's project-rela
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-> **Windows**: Make sure `engram.exe` is in your `PATH`. Cursor resolves MCP commands from the system PATH.
+> **Windows**: Make sure `mnemo.exe` is in your `PATH`. Cursor resolves MCP commands from the system PATH.
 
 > **Memory Protocol:** Add the Memory Protocol instructions to your `.cursorrules` file. See [DOCS.md](DOCS.md#memory-protocol-full-text) for the full text, or use the minimal version from [Surviving Compaction](#surviving-compaction-recommended).
 
@@ -484,8 +484,8 @@ Add to your `~/.windsurf/mcp.json` (Windows: `%USERPROFILE%\.windsurf\mcp.json`)
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp"]
     }
   }
@@ -496,16 +496,16 @@ Add to your `~/.windsurf/mcp.json` (Windows: `%USERPROFILE%\.windsurf\mcp.json`)
 
 ### Any other MCP agent
 
-The pattern is always the same — point your agent's MCP config to `engram mcp` via stdio transport.
+The pattern is always the same — point your agent's MCP config to `mnemo mcp` via stdio transport.
 
 ### Surviving Compaction (Recommended)
 
-When your agent compacts (summarizes long conversations to free context), it starts fresh — and might forget about Engram. To make memory truly resilient, add this to your agent's system prompt or config file:
+When your agent compacts (summarizes long conversations to free context), it starts fresh — and might forget about Mnemo. To make memory truly resilient, add this to your agent's system prompt or config file:
 
 **For Claude Code** (`CLAUDE.md`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Mnemo persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -519,7 +519,7 @@ Save memories proactively with mem_save after significant work.
 **For Gemini CLI** (`GEMINI.md`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Mnemo persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -527,7 +527,7 @@ You have access to Engram persistent memory via MCP tools (mem_save, mem_search,
 **For VS Code** (`Code/User/prompts/*.instructions.md` or custom instructions):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Mnemo persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
@@ -535,14 +535,14 @@ You have access to Engram persistent memory via MCP tools (mem_save, mem_search,
 **For Antigravity** (`~/.gemini/GEMINI.md` or `.agent/rules/`):
 ```markdown
 ## Memory
-You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+You have access to Mnemo persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
 - Save proactively after significant work — don't wait to be asked.
 - After any compaction or context reset, call `mem_context` to recover session state before continuing.
 ```
 
 **For Cursor/Windsurf** (`.cursorrules` or `.windsurfrules`):
 ```
-You have access to Engram persistent memory (mem_save, mem_search, mem_context).
+You have access to Mnemo persistent memory (mem_save, mem_search, mem_context).
 Save proactively after significant work. After context resets, call mem_context to recover state.
 ```
 
@@ -550,9 +550,9 @@ This is the **nuclear option** — system prompts survive everything, including 
 
 ## Why Not claude-mem?
 
-[claude-mem](https://github.com/thedotmack/claude-mem) is a great project (28K+ stars!) that inspired Engram. But we made fundamentally different design decisions:
+[claude-mem](https://github.com/thedotmack/claude-mem) is a great project (28K+ stars!) that inspired Mnemo. But we made fundamentally different design decisions:
 
-| | **Engram** | **claude-mem** |
+| | **Mnemo** | **claude-mem** |
 |---|---|---|
 | **Language** | Go (single binary, zero runtime deps) | TypeScript + Python (needs Node.js, Bun, uv) |
 | **Agent lock-in** | None. Works with any MCP agent | Claude Code only (uses Claude plugin hooks) |
@@ -561,8 +561,8 @@ This is the **nuclear option** — system prompts survive everything, including 
 | **Compression** | Agent does it inline (it already has the LLM) | Separate Claude API calls via agent-sdk |
 | **Dependencies** | `go install` and done | Node.js 18+, Bun, uv, Python, ChromaDB |
 | **Processes** | One binary (or none — MCP stdio) | Worker service on port 37777 + ChromaDB |
-| **Database** | Single `~/.engram/engram.db` file | SQLite + ChromaDB (two storage systems) |
-| **Web UI** | Terminal TUI (`engram tui`) | Web viewer on localhost:37777 |
+| **Database** | Single `~/.mnemo/mnemo.db` file | SQLite + ChromaDB (two storage systems) |
+| **Web UI** | Terminal TUI (`mnemo tui`) | Web viewer on localhost:37777 |
 | **Privacy** | `<private>` tags stripped at 2 layers | `<private>` tags stripped |
 | **Auto-capture** | No. Agent decides what matters | Yes. Captures all tool calls then compresses |
 | **License** | MIT | AGPL-3.0 |
@@ -576,7 +576,7 @@ This is the **nuclear option** — system prompts survive everything, including 
 - Requires a worker process, ChromaDB, and multiple runtimes
 - Locked to Claude Code's plugin system
 
-**Engram** lets the agent decide what's worth remembering. The agent already has the LLM, the context, and understands what just happened. Why run a separate compression pipeline?
+**Mnemo** lets the agent decide what's worth remembering. The agent already has the LLM, the context, and understands what just happened. Why run a separate compression pipeline?
 
 - `mem_save` after a bugfix: *"Fixed N+1 query — added eager loading in UserList"*
 - `mem_session_summary` at session end: structured Goal/Discoveries/Accomplished/Files
@@ -590,7 +590,7 @@ This is the **nuclear option** — system prompts survive everything, including 
 Interactive terminal UI for browsing your memory. Built with [Bubbletea](https://github.com/charmbracelet/bubbletea).
 
 ```bash
-engram tui
+mnemo tui
 ```
 <p align="center">
 <img src="assets/tui-dashboard.png" alt="TUI Dashboard" width="400" />
@@ -616,99 +616,99 @@ Share memories across machines and team members by committing them to your repo.
 ```bash
 # Export new memories as a compressed chunk
 # (automatically filters by current directory name as project)
-engram sync
+mnemo sync
 
 # Export ALL memories from every project (useful for a shared notes repo)
-engram sync --all
+mnemo sync --all
 
 # Commit to git
-git add .engram/ && git commit -m "sync engram memories"
+git add .mnemo/ && git commit -m "sync mnemo memories"
 
 # On another machine / clone: import new chunks
-engram sync --import
+mnemo sync --import
 
 # Check sync status
-engram sync --status
+mnemo sync --status
 
 # Override project detection if needed
-engram sync --project other-name
+mnemo sync --project other-name
 ```
 
 **How it works:**
 
 ```
-.engram/
+.mnemo/
 ├── manifest.json          ← small index (git diffs this)
 ├── chunks/
 │   ├── a3f8c1d2.jsonl.gz ← chunk by Alan (compressed, ~2KB)
 │   ├── b7d2e4f1.jsonl.gz ← chunk by Juan
 │   └── c9f1a2b3.jsonl.gz ← chunk by Alan (next day)
-└── engram.db              ← gitignored (local working DB)
+└── mnemo.db              ← gitignored (local working DB)
 ```
 
-- Each `engram sync` creates a **new chunk** — never modifies old ones
+- Each `mnemo sync` creates a **new chunk** — never modifies old ones
 - Chunks are **gzipped JSONL** — small files, git treats as binary (no diff noise)
 - The **manifest** is the only file git diffs — it's small and append-only
 - Each chunk has a **content hash ID** — imported only once, no duplicates
 - **No merge conflicts** on data — each dev creates independent chunks
 
-**Auto-import**: The OpenCode plugin automatically runs `engram sync --import` when it detects `.engram/manifest.json` in the project directory. Clone a repo, open OpenCode, and the team's memories are loaded.
+**Auto-import**: The OpenCode plugin automatically runs `mnemo sync --import` when it detects `.mnemo/manifest.json` in the project directory. Clone a repo, open OpenCode, and the team's memories are loaded.
 
 ## Cloud Sync
 
-Sync memories across machines via a Postgres-backed cloud server. **Auto-sync is on by default** — when you run `engram serve` or `engram mcp` with cloud credentials configured, every local write automatically pushes/pulls in the background. No manual sync needed.
+Sync memories across machines via a Postgres-backed cloud server. **Auto-sync is on by default** — when you run `mnemo serve` or `mnemo mcp` with cloud credentials configured, every local write automatically pushes/pulls in the background. No manual sync needed.
 
 - Cloud failures never block local reads or writes — the sync manager degrades gracefully with exponential backoff
-- Manual one-off sync: `engram cloud sync` (push + pull, then exit)
-- Check sync health: `engram cloud sync-status` (pending mutations, degraded state)
-- Project-scoped sync: `engram cloud enroll <project>` to choose which projects sync to the cloud
+- Manual one-off sync: `mnemo cloud sync` (push + pull, then exit)
+- Check sync health: `mnemo cloud sync-status` (pending mutations, degraded state)
+- Project-scoped sync: `mnemo cloud enroll <project>` to choose which projects sync to the cloud
 - Cloud-managed org policy: admins can pause/resume sync per project from the dashboard, with reason + audit trail
 - Autosync batches pushes by project, so one paused project does not block unrelated project mutations
 - **Web Dashboard**: Browse knowledge, projects, and contributor stats in the browser at `/dashboard/`
-- Legacy chunk-based sync: `engram cloud sync --legacy` (deprecated, preserved for backward compatibility)
+- Legacy chunk-based sync: `mnemo cloud sync --legacy` (deprecated, preserved for backward compatibility)
 - Client contract stays simple: one reachable base URL + one token
 
 See `DOCS.md` for the full cloud workflow, dashboard setup, security notes, and local two-machine testing guidance.
 
 ### Cloud Dashboard
 
-A server-rendered web UI embedded in `engram cloud serve`. Navigate to `http://<server>/dashboard/` and log in with your cloud credentials.
+A server-rendered web UI embedded in `mnemo cloud serve`. Navigate to `http://<server>/dashboard/` and log in with your cloud credentials.
 
 - **Dashboard** — Shared-memory overview with synced project stats
 - **Browser** — Search and browse observations, sessions, and prompts with linked detail pages
 - **Projects** — Per-project detail views, pause status, and recent activity
 - **Contributors** — Per-developer stats plus drill-down into sessions, observations, and prompts
-- **Admin** — System health, user management, and project sync controls (requires `ENGRAM_CLOUD_ADMIN` env var)
+- **Admin** — System health, user management, and project sync controls (requires `MNEMO_CLOUD_ADMIN` env var)
 
 Built with templ + htmx — zero JS build step, ships inside the single binary.
 
 ## CLI
 
 ```
-engram setup [agent]      Install/setup agent integration (opencode, claude-code, gemini-cli, codex)
-engram serve [port]       Start HTTP API server (default: 7437)
-engram mcp                Start MCP server (stdio transport)
-engram tui                Launch interactive terminal UI
-engram search <query>     Search memories
-engram save <title> <msg> Save a memory
-engram timeline <obs_id>  Chronological context around an observation
-engram context [project]  Recent context from previous sessions
-engram stats              Memory statistics
-engram export [file]      Export all memories to JSON
-engram import <file>      Import memories from JSON
-engram sync               Export new memories as compressed chunk to .engram/
-engram sync --all         Export ALL projects (ignore directory-based filter)
-engram cloud serve        Start cloud server (Postgres backend)
-engram cloud register     Register a cloud account
-engram cloud login        Login to a cloud account
-engram cloud sync         Sync local mutations to cloud (push + pull)
-engram cloud sync-status  Show local sync journal state
-engram cloud status       Show cloud sync status (legacy chunks)
-engram cloud api-key      Generate an API key for cloud access
-engram cloud enroll <p>   Enroll a project for cloud sync
-engram cloud unenroll <p> Unenroll a project from cloud sync
-engram cloud projects     List enrolled projects
-engram version            Show version
+mnemo setup [agent]      Install/setup agent integration (opencode, claude-code, gemini-cli, codex)
+mnemo serve [port]       Start HTTP API server (default: 7437)
+mnemo mcp                Start MCP server (stdio transport)
+mnemo tui                Launch interactive terminal UI
+mnemo search <query>     Search memories
+mnemo save <title> <msg> Save a memory
+mnemo timeline <obs_id>  Chronological context around an observation
+mnemo context [project]  Recent context from previous sessions
+mnemo stats              Memory statistics
+mnemo export [file]      Export all memories to JSON
+mnemo import <file>      Import memories from JSON
+mnemo sync               Export new memories as compressed chunk to .mnemo/
+mnemo sync --all         Export ALL projects (ignore directory-based filter)
+mnemo cloud serve        Start cloud server (Postgres backend)
+mnemo cloud register     Register a cloud account
+mnemo cloud login        Login to a cloud account
+mnemo cloud sync         Sync local mutations to cloud (push + pull)
+mnemo cloud sync-status  Show local sync journal state
+mnemo cloud status       Show cloud sync status (legacy chunks)
+mnemo cloud api-key      Generate an API key for cloud access
+mnemo cloud enroll <p>   Enroll a project for cloud sync
+mnemo cloud unenroll <p> Unenroll a project from cloud sync
+mnemo cloud projects     List enrolled projects
+mnemo version            Show version
 ```
 
 ## OpenCode Plugin
@@ -716,19 +716,19 @@ engram version            Show version
 For [OpenCode](https://opencode.ai) users, a thin TypeScript plugin adds enhanced session management on top of the MCP tools:
 
 ```bash
-# Install via engram (recommended — works from Homebrew or binary install)
-engram setup opencode
+# Install via mnemo (recommended — works from Homebrew or binary install)
+mnemo setup opencode
 
-# Or manually: cp plugin/opencode/engram.ts ~/.config/opencode/plugins/
+# Or manually: cp plugin/opencode/mnemo.ts ~/.config/opencode/plugins/
 ```
 
-The plugin auto-starts the HTTP server if it's not already running — no manual `engram serve` needed.
+The plugin auto-starts the HTTP server if it's not already running — no manual `mnemo serve` needed.
 
 > **Local model compatibility:** The plugin works with all models, including local ones served via llama.cpp, Ollama, or similar. The Memory Protocol is concatenated into the existing system prompt (not added as a separate system message), so models with strict Jinja templates (Qwen, Mistral/Ministral) work correctly.
 
 The plugin:
-- **Auto-starts** the engram server if not running
-- **Auto-imports** git-synced memories from `.engram/manifest.json` if present in the project
+- **Auto-starts** the mnemo server if not running
+- **Auto-imports** git-synced memories from `.mnemo/manifest.json` if present in the project
 - **Creates sessions** on-demand via `ensureSession()` (resilient to restarts/reconnects)
 - **Injects the Memory Protocol** into the agent's system prompt via `chat.system.transform` — strict rules for when to save, when to search, and a mandatory session close protocol. The protocol is concatenated into the existing system message (not pushed as a separate one), ensuring compatibility with models that only accept a single system block (Qwen, Mistral/Ministral via llama.cpp, etc.)
 - **Injects previous session context** into the compaction prompt
@@ -762,11 +762,11 @@ For [Claude Code](https://docs.anthropic.com/en/docs/claude-code) users, a plugi
 
 ```bash
 # Install via Claude Code marketplace (recommended)
-claude plugin marketplace add Gentleman-Programming/engram
-claude plugin install engram
+claude plugin marketplace add MiguelAguiarDEV/mnemo
+claude plugin install mnemo
 
-# Or via engram binary (works from Homebrew or binary install)
-engram setup claude-code
+# Or via mnemo binary (works from Homebrew or binary install)
+mnemo setup claude-code
 
 # Or for local development/testing from the repo
 claude --plugin-dir ./plugin/claude-code
@@ -788,7 +788,7 @@ claude --plugin-dir ./plugin/claude-code
 ```
 plugin/claude-code/
 ├── .claude-plugin/plugin.json     # Plugin manifest
-├── .mcp.json                      # Registers engram MCP server
+├── .mcp.json                      # Registers mnemo MCP server
 ├── hooks/hooks.json               # SessionStart + SubagentStop + Stop lifecycle hooks
 ├── scripts/
 │   ├── session-start.sh           # Ensures server, creates session, imports chunks, injects context
@@ -801,9 +801,9 @@ plugin/claude-code/
 ### How It Works
 
 **On session start** (`startup`):
-1. Ensures the engram HTTP server is running
+1. Ensures the mnemo HTTP server is running
 2. Creates a new session via the API
-3. Auto-imports git-synced chunks from `.engram/manifest.json` (if present)
+3. Auto-imports git-synced chunks from `.mnemo/manifest.json` (if present)
 4. Injects previous session context into Claude's initial context
 
 **On compaction** (`compact`):
@@ -832,8 +832,8 @@ Set up API with <private>sk-abc123</private> key
 ## Project Structure
 
 ```
-engram/
-├── cmd/engram/main.go              # CLI entrypoint
+mnemo/
+├── cmd/mnemo/main.go              # CLI entrypoint
 ├── internal/
 │   ├── store/store.go              # Core: SQLite + FTS5 + all data ops
 │   ├── server/server.go            # HTTP REST API (port 7437)
@@ -852,14 +852,14 @@ engram/
 │       ├── update.go               # Input handling, per-screen handlers
 │       └── view.go                 # Rendering, per-screen views
 ├── plugin/
-│   ├── opencode/engram.ts          # OpenCode adapter plugin
+│   ├── opencode/mnemo.ts          # OpenCode adapter plugin
 │   └── claude-code/                # Claude Code plugin (hooks + skill)
 │       ├── .claude-plugin/plugin.json
 │       ├── .mcp.json
 │       ├── hooks/hooks.json
 │       ├── scripts/                # session-start, post-compaction, subagent-stop, session-stop
 │       └── skills/memory/SKILL.md
-├── skills/                         # Contributor AI skills (repo-wide standards + Engram-specific guardrails)
+├── skills/                         # Contributor AI skills (repo-wide standards + Mnemo-specific guardrails)
 ├── setup.sh                        # Links repo skills into .claude/.codex/.gemini (project-local)
 ├── assets/                         # Screenshots and media
 ├── DOCS.md                         # Full technical documentation
@@ -879,12 +879,12 @@ The binary includes SQLite (via [modernc.org/sqlite](https://pkg.go.dev/modernc.
 
 | Variable | Description | Default |
 |---|---|---|
-| `ENGRAM_DATA_DIR` | Data directory | `~/.engram` (Windows: `%USERPROFILE%\.engram`) |
-| `ENGRAM_PORT` | HTTP server port | `7437` |
+| `MNEMO_DATA_DIR` | Data directory | `~/.mnemo` (Windows: `%USERPROFILE%\.mnemo`) |
+| `MNEMO_PORT` | HTTP server port | `7437` |
 
 ### Windows Config Paths
 
-When using `engram setup`, config files are written to platform-appropriate locations:
+When using `mnemo setup`, config files are written to platform-appropriate locations:
 
 | Agent | macOS / Linux | Windows |
 |-------|---------------|---------|
@@ -894,7 +894,7 @@ When using `engram setup`, config files are written to platform-appropriate loca
 | Claude Code | Managed by `claude` CLI | Managed by `claude` CLI |
 | VS Code | `.vscode/mcp.json` (workspace) or `~/Library/Application Support/Code/User/mcp.json` (user) | `.vscode\mcp.json` (workspace) or `%APPDATA%\Code\User\mcp.json` (user) |
 | Antigravity | `~/.gemini/antigravity/mcp_config.json` | `%USERPROFILE%\.gemini\antigravity\mcp_config.json` |
-| Data directory | `~/.engram/` | `%USERPROFILE%\.engram\` |
+| Data directory | `~/.mnemo/` | `%USERPROFILE%\.mnemo\` |
 
 ## License
 

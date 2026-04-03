@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/prometheus"
+	"github.com/MiguelAguiarDEV/mnemo/internal/prometheus"
 )
 
 // ─── Mock Worker Backend ─────────────────────────────────────────────────────

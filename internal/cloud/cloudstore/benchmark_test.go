@@ -12,7 +12,7 @@ func BenchmarkSearchLargeUserDataset(b *testing.B) {
 	if err != nil {
 		b.Fatalf("CreateUser: %v", err)
 	}
-	if err := cs.CreateSession(user.ID, "bench-session", "engram", "/bench"); err != nil {
+	if err := cs.CreateSession(user.ID, "bench-session", "mnemo", "/bench"); err != nil {
 		b.Fatalf("CreateSession: %v", err)
 	}
 
@@ -26,7 +26,7 @@ func BenchmarkSearchLargeUserDataset(b *testing.B) {
 			Type:      "benchmark",
 			Title:     fmt.Sprintf("Observation %d", i),
 			Content:   content,
-			Project:   "engram",
+			Project:   "mnemo",
 			Scope:     "project",
 		}); err != nil {
 			b.Fatalf("AddObservation %d: %v", i, err)
@@ -35,7 +35,7 @@ func BenchmarkSearchLargeUserDataset(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		results, err := cs.Search(user.ID, "auth retry", CloudSearchOptions{Project: "engram", Limit: 20})
+		results, err := cs.Search(user.ID, "auth retry", CloudSearchOptions{Project: "mnemo", Limit: 20})
 		if err != nil {
 			b.Fatalf("Search: %v", err)
 		}

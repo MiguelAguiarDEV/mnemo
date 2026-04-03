@@ -59,13 +59,13 @@ func (m *mockRunner) Run(name string, args ...string) ([]byte, error) {
 func (m *mockRunner) onSearch(fn func(args []string) ([]byte, error)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.handlers["engram search"] = fn
+	m.handlers["mnemo search"] = fn
 }
 
 func (m *mockRunner) onSave(fn func(args []string) ([]byte, error)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.handlers["engram save"] = fn
+	m.handlers["mnemo save"] = fn
 }
 
 func (m *mockRunner) callCount() int {
@@ -267,7 +267,7 @@ func TestOrient_NeedsConsolidation(t *testing.T) {
 
 	lockPath := tempLockPath(t)
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(20),
@@ -293,7 +293,7 @@ func TestOrient_TooSoon(t *testing.T) {
 	os.Chtimes(lockPath, now, now)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(24*time.Hour),
 		WithMinObservations(5),
@@ -322,7 +322,7 @@ func TestOrient_NotEnoughObservations(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(20),
@@ -351,7 +351,7 @@ func TestGather_GroupsByTopicKey(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -389,7 +389,7 @@ func TestGather_NoTopicKeyGroupsByType(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -406,11 +406,11 @@ func TestGather_NoTopicKeyGroupsByType(t *testing.T) {
 func TestGather_EngineError(t *testing.T) {
 	runner := newMockRunner()
 	runner.onSearch(func(args []string) ([]byte, error) {
-		return []byte("connection refused"), fmt.Errorf("engram failed")
+		return []byte("connection refused"), fmt.Errorf("mnemo failed")
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -419,8 +419,8 @@ func TestGather_EngineError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from gather")
 	}
-	if !strings.Contains(err.Error(), "engram search") {
-		t.Fatalf("expected engram search error, got: %v", err)
+	if !strings.Contains(err.Error(), "mnemo search") {
+		t.Fatalf("expected mnemo search error, got: %v", err)
 	}
 }
 
@@ -541,7 +541,7 @@ func TestPrune_SavesConsolidated(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 		WithProject("test-proj"),
@@ -597,7 +597,7 @@ func TestPrune_KeptObservation_NoSave(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -625,7 +625,7 @@ func TestPrune_SaveFailure_Logged(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -662,7 +662,7 @@ func TestRun_FullCycle(t *testing.T) {
 
 	lockPath := tempLockPath(t)
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(5),
@@ -699,7 +699,7 @@ func TestRun_SkipsWhenNotNeeded(t *testing.T) {
 	os.Chtimes(lockPath, now, now)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(24*time.Hour),
 		WithCommandRunner(runner),
@@ -728,7 +728,7 @@ func TestRun_LockBlocked(t *testing.T) {
 	os.Chtimes(lockPath, now, now)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(5),
@@ -751,12 +751,12 @@ func TestRun_RollbackOnGatherError(t *testing.T) {
 			return marshalObs(makeObservations(25, "x")), nil
 		}
 		// Second call: gather fails.
-		return nil, fmt.Errorf("engram unavailable")
+		return nil, fmt.Errorf("mnemo unavailable")
 	})
 
 	lockPath := tempLockPath(t)
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(5),
@@ -786,7 +786,7 @@ func TestRunBackground_CancelStops(t *testing.T) {
 	os.Chtimes(lockPath, now, now)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(24*time.Hour),
 		WithCheckInterval(10*time.Millisecond),
@@ -876,8 +876,8 @@ func TestCountByAction(t *testing.T) {
 
 func TestNew_Defaults(t *testing.T) {
 	c := New()
-	if c.engramBin != "engram" {
-		t.Fatalf("expected default engramBin='engram', got %q", c.engramBin)
+	if c.mnemoBin != "mnemo" {
+		t.Fatalf("expected default mnemoBin='mnemo', got %q", c.mnemoBin)
 	}
 	if c.minAge != DefaultMinAge {
 		t.Fatalf("expected default minAge=%v, got %v", DefaultMinAge, c.minAge)
@@ -896,7 +896,7 @@ func TestNew_Defaults(t *testing.T) {
 func TestNew_WithOptions(t *testing.T) {
 	lockPath := tempLockPath(t)
 	c := New(
-		WithEngramBin("/usr/bin/engram"),
+		WithMnemoBin("/usr/bin/mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(12*time.Hour),
 		WithMinObservations(10),
@@ -904,8 +904,8 @@ func TestNew_WithOptions(t *testing.T) {
 		WithProject("my-project"),
 	)
 
-	if c.engramBin != "/usr/bin/engram" {
-		t.Fatalf("expected engramBin='/usr/bin/engram', got %q", c.engramBin)
+	if c.mnemoBin != "/usr/bin/mnemo" {
+		t.Fatalf("expected mnemoBin='/usr/bin/mnemo', got %q", c.mnemoBin)
 	}
 	if c.minAge != 12*time.Hour {
 		t.Fatalf("expected minAge=12h, got %v", c.minAge)
@@ -952,7 +952,7 @@ func TestCountNewObservations_WithLastRun(t *testing.T) {
 	os.Chtimes(lockPath, lastRun, lastRun)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithCommandRunner(runner),
 	)
@@ -983,7 +983,7 @@ func TestCountNewObservations_UnparsableDate(t *testing.T) {
 	os.Chtimes(lockPath, past, past)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithCommandRunner(runner),
 	)
@@ -1009,7 +1009,7 @@ func TestCountNewObservations_LineDelimitedJSON(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -1038,7 +1038,7 @@ func TestCountNewObservations_WithProject(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 		WithProject("my-proj"),
@@ -1070,7 +1070,7 @@ func TestRun_EmptyGather(t *testing.T) {
 
 	lockPath := tempLockPath(t)
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(5),
@@ -1103,7 +1103,7 @@ func TestRun_LockBlockedAfterOrient(t *testing.T) {
 	os.Chtimes(lockPath, now, now)
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(lockPath),
 		WithMinAge(time.Millisecond), // orient passes (lock mtime is recent but minAge is tiny)
 		WithMinObservations(5),
@@ -1134,7 +1134,7 @@ func TestPrune_TypePrefixTopicKey_NoTopicKeyFlag(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithCommandRunner(runner),
 	)
@@ -1174,7 +1174,7 @@ func TestRunBackground_HandlesRunError(t *testing.T) {
 	})
 
 	c := New(
-		WithEngramBin("engram"),
+		WithMnemoBin("mnemo"),
 		WithLockPath(tempLockPath(t)),
 		WithMinAge(time.Millisecond),
 		WithMinObservations(5),

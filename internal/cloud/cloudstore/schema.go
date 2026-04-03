@@ -1,7 +1,7 @@
 package cloudstore
 
 // schemaDDL contains all CREATE TABLE IF NOT EXISTS statements for the
-// Engram Cloud Postgres schema. It is executed inside a single transaction
+// Mnemo Cloud Postgres schema. It is executed inside a single transaction
 // during CloudStore initialization to guarantee atomicity and idempotency.
 const schemaDDL = `
 -- ── Users ───────────────────────────────────────────────────────────────

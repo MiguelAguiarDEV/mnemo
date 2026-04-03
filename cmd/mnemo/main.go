@@ -27,23 +27,23 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/autosync"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudserver"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
-	"github.com/Gentleman-Programming/engram/internal/cloud/dashboard"
-	"github.com/Gentleman-Programming/engram/internal/cloud/jarvis"
-	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
-	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
-	"github.com/Gentleman-Programming/engram/internal/gateway"
-	"github.com/Gentleman-Programming/engram/internal/mcp"
-	"github.com/Gentleman-Programming/engram/internal/server"
-	"github.com/Gentleman-Programming/engram/internal/setup"
-	"github.com/Gentleman-Programming/engram/internal/store"
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
-	"github.com/Gentleman-Programming/engram/internal/tui"
-	versioncheck "github.com/Gentleman-Programming/engram/internal/version"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/autosync"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudserver"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/dashboard"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/jarvis"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/remote"
+	"github.com/MiguelAguiarDEV/mnemo/internal/gateway"
+	"github.com/MiguelAguiarDEV/mnemo/internal/mcp"
+	"github.com/MiguelAguiarDEV/mnemo/internal/server"
+	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
+	"github.com/MiguelAguiarDEV/mnemo/internal/tui"
+	versioncheck "github.com/MiguelAguiarDEV/mnemo/internal/version"
 
 	tea "github.com/charmbracelet/bubbletea"
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -86,11 +86,11 @@ var (
 	storeExport        = func(s *store.Store) (*store.ExportData, error) { return s.Export() }
 	jsonMarshalIndent  = json.MarshalIndent
 
-	syncStatus = func(sy *engramsync.Syncer) (localChunks int, remoteChunks int, pendingImport int, err error) {
+	syncStatus = func(sy *mnemosync.Syncer) (localChunks int, remoteChunks int, pendingImport int, err error) {
 		return sy.Status()
 	}
-	syncImport = func(sy *engramsync.Syncer) (*engramsync.ImportResult, error) { return sy.Import() }
-	syncExport = func(sy *engramsync.Syncer, createdBy, project string) (*engramsync.SyncResult, error) {
+	syncImport = func(sy *mnemosync.Syncer) (*mnemosync.ImportResult, error) { return sy.Import() }
+	syncExport = func(sy *mnemosync.Syncer, createdBy, project string) (*mnemosync.SyncResult, error) {
 		return sy.Export(createdBy, project)
 	}
 
@@ -140,7 +140,7 @@ func main() {
 	}
 
 	// Allow overriding data dir via env
-	if dir := os.Getenv("ENGRAM_DATA_DIR"); dir != "" {
+	if dir := os.Getenv("MNEMO_DATA_DIR"); dir != "" {
 		cfg.DataDir = dir
 	}
 
@@ -240,7 +240,7 @@ func tryStartAutosync(s *store.Store, dataDir string) (*autosync.Manager, contex
 
 func cmdServe(cfg store.Config) {
 	port := 7437 // "ENGR" on phone keypad vibes
-	if p := os.Getenv("ENGRAM_PORT"); p != "" {
+	if p := os.Getenv("MNEMO_PORT"); p != "" {
 		if n, err := strconv.Atoi(p); err == nil {
 			port = n
 		}
@@ -651,7 +651,7 @@ func cmdStats(cfg store.Config) {
 		projects = strings.Join(stats.Projects, ", ")
 	}
 
-	fmt.Printf("Engram Memory Stats\n")
+	fmt.Printf("Mnemo Memory Stats\n")
 	fmt.Printf("  Sessions:     %d\n", stats.TotalSessions)
 	fmt.Printf("  Observations: %d\n", stats.TotalObservations)
 	fmt.Printf("  Prompts:      %d\n", stats.TotalPrompts)
@@ -789,7 +789,7 @@ func cmdSync(cfg store.Config) {
 		return
 	}
 
-	sy := engramsync.NewLocal(s, syncDir)
+	sy := mnemosync.NewLocal(s, syncDir)
 
 	if doStatus {
 		local, remote, pending, err := syncStatus(sy)
@@ -828,7 +828,7 @@ func cmdSync(cfg store.Config) {
 	}
 
 	// Export: DB → new chunk
-	username := engramsync.GetUsername()
+	username := mnemosync.GetUsername()
 	if doAll {
 		fmt.Println("Exporting ALL memories (all projects)...")
 	} else {
@@ -857,8 +857,8 @@ func cmdSync(cfg store.Config) {
 	fmt.Printf("  git add .mnemo/ && git commit -m \"sync mnemo memories\"\n")
 }
 
-func handleRemoteSync(s *store.Store, transport engramsync.Transport, doStatus, doImport, doAll bool, project string) {
-	sy := engramsync.NewWithTransport(s, transport)
+func handleRemoteSync(s *store.Store, transport mnemosync.Transport, doStatus, doImport, doAll bool, project string) {
+	sy := mnemosync.NewWithTransport(s, transport)
 
 	if doStatus {
 		local, remoteCount, pending, err := syncStatus(sy)
@@ -886,7 +886,7 @@ func handleRemoteSync(s *store.Store, transport engramsync.Transport, doStatus, 
 		return
 	}
 
-	username := engramsync.GetUsername()
+	username := mnemosync.GetUsername()
 	if doAll {
 		fmt.Println("Pushing ALL memories to remote...")
 	} else if project != "" {
@@ -1055,10 +1055,10 @@ func resolveCloudClientConfig(dataDir, cliServerURL, cliToken string, useConfigS
 	token := cliToken
 
 	if serverURL == "" {
-		serverURL = os.Getenv("ENGRAM_REMOTE_URL")
+		serverURL = os.Getenv("MNEMO_REMOTE_URL")
 	}
 	if token == "" {
-		token = os.Getenv("ENGRAM_TOKEN")
+		token = os.Getenv("MNEMO_TOKEN")
 	}
 
 	var cc *CloudConfig
@@ -1076,7 +1076,7 @@ func resolveCloudClientConfig(dataDir, cliServerURL, cliToken string, useConfigS
 		return "", "", nil
 	}
 	if token == "" {
-		return "", "", fmt.Errorf("cloud config missing token (provide --token, ENGRAM_TOKEN, or login first)")
+		return "", "", fmt.Errorf("cloud config missing token (provide --token, MNEMO_TOKEN, or login first)")
 	}
 	return serverURL, token, nil
 }
@@ -1156,13 +1156,13 @@ func cmdCloudServe() {
 	}
 
 	if cloudCfg.DSN == "" {
-		fmt.Fprintln(os.Stderr, "error: --database-url or ENGRAM_DATABASE_URL is required")
+		fmt.Fprintln(os.Stderr, "error: --database-url or MNEMO_DATABASE_URL is required")
 		exitFunc(1)
 		return
 	}
 
 	if cloudCfg.JWTSecret == "" {
-		fmt.Fprintln(os.Stderr, "error: ENGRAM_JWT_SECRET environment variable is required (>= 32 chars)")
+		fmt.Fprintln(os.Stderr, "error: MNEMO_JWT_SECRET environment variable is required (>= 32 chars)")
 		exitFunc(1)
 		return
 	}
@@ -1624,7 +1624,7 @@ func cmdCloudStatus(cfg store.Config) {
 	if err != nil {
 		fatal(err)
 	}
-	sy := engramsync.NewWithTransport(s, rt)
+	sy := mnemosync.NewWithTransport(s, rt)
 
 	local, remoteCount, pending, err := syncStatus(sy)
 	if err != nil {
@@ -1917,7 +1917,7 @@ Commands:
 
   cloud serve        Start cloud server (Postgres backend)
                        --port PORT          HTTP port (default: 8080)
-                       --database-url URL   Postgres DSN (or ENGRAM_DATABASE_URL env)
+                       --database-url URL   Postgres DSN (or MNEMO_DATABASE_URL env)
   cloud register     Register a new cloud account
                        --server URL         Cloud server URL (required)
   cloud login        Login to an existing cloud account
@@ -1935,12 +1935,12 @@ Commands:
   help               Show this help
 
 Environment:
-  ENGRAM_DATA_DIR    Override data directory (default: ~/.mnemo)
-  ENGRAM_PORT        Override HTTP server port (default: 7437)
-  ENGRAM_REMOTE_URL  Cloud server URL (used by --remote flag)
-  ENGRAM_TOKEN       Cloud auth token (used by --token flag)
-  ENGRAM_DATABASE_URL  Postgres DSN for cloud serve
-  ENGRAM_JWT_SECRET    JWT signing secret for cloud serve (>= 32 chars)
+  MNEMO_DATA_DIR    Override data directory (default: ~/.mnemo)
+  MNEMO_PORT        Override HTTP server port (default: 7437)
+  MNEMO_REMOTE_URL  Cloud server URL (used by --remote flag)
+  MNEMO_TOKEN       Cloud auth token (used by --token flag)
+  MNEMO_DATABASE_URL  Postgres DSN for cloud serve
+  MNEMO_JWT_SECRET    JWT signing secret for cloud serve (>= 32 chars)
 
 MCP Configuration (add to your agent's config):
   {

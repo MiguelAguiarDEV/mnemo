@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
 // ─── Shared Components ──────────────────────────────────────────────────────
@@ -320,7 +320,7 @@ func DashboardHome(username string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</p><h2>Welcome to Engram Cloud</h2><p class=\"hero-lead\">Your shared memory workspace is ready. Local SQLite stays authoritative, while cloud turns it into an index your team and agents can actually use.</p></div><div class=\"hero-console\"><p><span class=\"console-key\">source</span> local-first SQLite journals</p><p><span class=\"console-key\">replication</span> cloud-backed mutation stream</p><p><span class=\"console-key\">access</span> browser dashboard / agent APIs / human review</p></div></div><div class=\"data-frame\" id=\"dashboard-stats\" hx-get=\"/dashboard/stats\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><p class=\"htmx-indicator terminal-note\">Loading stats...</p></div></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</p><h2>Welcome to Mnemo Cloud</h2><p class=\"hero-lead\">Your shared memory workspace is ready. Local SQLite stays authoritative, while cloud turns it into an index your team and agents can actually use.</p></div><div class=\"hero-console\"><p><span class=\"console-key\">source</span> local-first SQLite journals</p><p><span class=\"console-key\">replication</span> cloud-backed mutation stream</p><p><span class=\"console-key\">access</span> browser dashboard / agent APIs / human review</p></div></div><div class=\"data-frame\" id=\"dashboard-stats\" hx-get=\"/dashboard/stats\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><p class=\"htmx-indicator terminal-note\">Loading stats...</p></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

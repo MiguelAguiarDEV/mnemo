@@ -1,12 +1,12 @@
 #!/bin/bash
-# Engram — SubagentStop hook for Claude Code (async)
+# Mnemo — SubagentStop hook for Claude Code (async)
 #
 # Thin hook: reads the subagent output from stdin, POSTs it to
 # the passive capture endpoint. All extraction logic lives in the
 # Go server — this script is intentionally minimal.
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+MNEMO_PORT="${MNEMO_PORT:-7437}"
+MNEMO_URL="http://127.0.0.1:${MNEMO_PORT}"
 
 # Read hook input from stdin
 INPUT=$(cat)
@@ -19,7 +19,7 @@ PROJECT=$(basename "$CWD")
 [ -z "$OUTPUT" ] && exit 0
 
 # Fire and forget — server handles extraction, dedup, and storage
-curl -sf "${ENGRAM_URL}/observations/passive" \
+curl -sf "${MNEMO_URL}/observations/passive" \
   -X POST \
   -H "Content-Type: application/json" \
   -d "$(jq -n \

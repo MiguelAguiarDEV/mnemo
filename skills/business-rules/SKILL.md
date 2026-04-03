@@ -1,11 +1,11 @@
 ---
 name: business-rules
 description: >
-  Product and business-rule guardrails for Engram. Trigger: Any change that
+  Product and business-rule guardrails for Mnemo. Trigger: Any change that
   affects sync behavior, project controls, permissions, or memory semantics.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

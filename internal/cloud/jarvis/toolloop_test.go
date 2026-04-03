@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/prometheus"
-	"github.com/Gentleman-Programming/engram/internal/atlas"
-	"github.com/Gentleman-Programming/engram/internal/athena"
+	"github.com/MiguelAguiarDEV/mnemo/internal/prometheus"
+	"github.com/MiguelAguiarDEV/mnemo/internal/atlas"
+	"github.com/MiguelAguiarDEV/mnemo/internal/athena"
 )
 
 // ─── Mock LLM Backend ────────────────────────────────────────────────────────

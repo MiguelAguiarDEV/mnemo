@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -36,7 +36,7 @@ var (
 
 // ─── Claims ──────────────────────────────────────────────────────────────────
 
-// Claims represents the custom JWT claims for Engram Cloud tokens.
+// Claims represents the custom JWT claims for Mnemo Cloud tokens.
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
@@ -57,7 +57,7 @@ type AuthResult struct {
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
-// Service handles JWT authentication and user registration/login for Engram Cloud.
+// Service handles JWT authentication and user registration/login for Mnemo Cloud.
 type Service struct {
 	secret []byte
 	store  *cloudstore.CloudStore

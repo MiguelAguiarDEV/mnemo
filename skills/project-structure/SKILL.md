@@ -1,11 +1,11 @@
 ---
 name: project-structure
 description: >
-  Repository structure and placement rules for Engram. Trigger: Creating files,
+  Repository structure and placement rules for Mnemo. Trigger: Creating files,
   packages, handlers, templates, styles, or tests in this repo.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

@@ -1,9 +1,9 @@
 {
-  "name": "engram",
+  "name": "mnemo",
   "description": "Persistent memory for AI coding agents. Survives across sessions and compactions.",
   "version": "0.1.0",
   "author": {
-    "name": "Gentleman Programming"
+    "name": "MiguelAguiarDEV"
   },
   "homepage": "https://github.com/Gentleman-Programming/engram",
   "repository": "https://github.com/Gentleman-Programming/engram",

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/gateway"
+	"github.com/MiguelAguiarDEV/mnemo/internal/gateway"
 )
 
 // ─── Mock ChatService ─────────────────────────────────────────────────────

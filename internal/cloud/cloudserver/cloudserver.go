@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
-	"github.com/Gentleman-Programming/engram/internal/cloud/dashboard"
-	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
-	"github.com/Gentleman-Programming/engram/internal/gateway"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/dashboard"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
+	"github.com/MiguelAguiarDEV/mnemo/internal/gateway"
 )
 
 // ─── CloudServer ────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ type JobService interface {
 	ListJobs() []map[string]any
 }
 
-// CloudServer provides the HTTP API for Engram cloud mode.
+// CloudServer provides the HTTP API for Mnemo cloud mode.
 type CloudServer struct {
 	store   *cloudstore.CloudStore
 	auth    *auth.Service
@@ -147,7 +147,7 @@ func (s *CloudServer) Start() error {
 	if err != nil {
 		return fmt.Errorf("mnemo cloud server: listen %s: %w", addr, err)
 	}
-	log.Printf("[engram-cloud] HTTP server listening on %s", addr)
+	log.Printf("[mnemo-cloud] HTTP server listening on %s", addr)
 	return serveFn(ln, s.mux)
 }
 
@@ -245,7 +245,7 @@ func (s *CloudServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		if err := s.store.Ping(); err != nil {
 			jsonResponse(w, http.StatusServiceUnavailable, map[string]any{
 				"status":   "degraded",
-				"service":  "engram-cloud",
+				"service": "mnemo-cloud",
 				"version":  "0.1.0",
 				"database": "unavailable",
 			})
@@ -255,7 +255,7 @@ func (s *CloudServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, http.StatusOK, map[string]any{
 		"status":  "ok",
-		"service": "engram-cloud",
+		"service": "mnemo-cloud",
 		"version": "0.1.0",
 	})
 }

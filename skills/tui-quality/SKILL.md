@@ -1,11 +1,11 @@
 ---
 name: tui-quality
 description: >
-  Bubbletea/Lipgloss quality rules for Engram TUI.
+  Bubbletea/Lipgloss quality rules for Mnemo TUI.
   Trigger: Changes in model, update, view, navigation, or rendering.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

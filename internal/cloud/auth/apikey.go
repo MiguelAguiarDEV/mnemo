@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
-// apiKeyPrefix is the prefix for all Engram API keys.
+// apiKeyPrefix is the prefix for all Mnemo API keys.
 const apiKeyPrefix = "eng_"
 
 // GenerateAPIKey creates a new API key with the eng_ prefix and returns both

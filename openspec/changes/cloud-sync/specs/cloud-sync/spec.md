@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This specification defines the behavior for Engram's cloud synchronization feature: a self-hosted server backed by PostgreSQL that enables multi-device memory sync, team collaboration, and authenticated remote access. The cloud mode operates alongside the existing local SQLite mode without breaking any current functionality.
+This specification defines the behavior for Mnemo's cloud synchronization feature: a self-hosted server backed by PostgreSQL that enables multi-device memory sync, team collaboration, and authenticated remote access. The cloud mode operates alongside the existing local SQLite mode without breaking any current functionality.
 
 The feature introduces six new packages/domains and modifies one existing domain:
 
@@ -12,7 +12,7 @@ The feature introduces six new packages/domains and modifies one existing domain
 | JWT Authentication | `internal/cloud/auth` | NEW |
 | Cloud Server | `internal/cloud/server` | NEW |
 | Remote Sync Transport | `internal/cloud/sync` | NEW |
-| CLI Integration | `cmd/engram` | MODIFIED |
+| CLI Integration | `cmd/mnemo` | MODIFIED |
 | Cloud Full-Text Search | `internal/cloud/pgstore` (FTS) | NEW |
 
 ---
@@ -21,7 +21,7 @@ The feature introduces six new packages/domains and modifies one existing domain
 
 ### Purpose
 
-A PostgreSQL-backed implementation of the Engram storage layer that mirrors the local SQLite schema but uses PostgreSQL-native types (UUID, TIMESTAMPTZ, tsvector) for cloud deployments.
+A PostgreSQL-backed implementation of the Mnemo storage layer that mirrors the local SQLite schema but uses PostgreSQL-native types (UUID, TIMESTAMPTZ, tsvector) for cloud deployments.
 
 ---
 
@@ -31,7 +31,7 @@ The system MUST initialize the PostgreSQL schema idempotently using `CREATE TABL
 
 #### Scenario: First-time schema creation on empty database
 
-- GIVEN a PostgreSQL database with no Engram tables
+- GIVEN a PostgreSQL database with no Mnemo tables
 - WHEN the pgstore is initialized
 - THEN tables `cloud_users`, `cloud_sessions`, `cloud_observations`, `cloud_prompts`, `cloud_chunks`, and `cloud_sync_chunks` MUST be created
 - AND all indexes and triggers MUST be created
@@ -39,7 +39,7 @@ The system MUST initialize the PostgreSQL schema idempotently using `CREATE TABL
 
 #### Scenario: Idempotent re-initialization on existing schema
 
-- GIVEN a PostgreSQL database with all Engram tables already present
+- GIVEN a PostgreSQL database with all Mnemo tables already present
 - WHEN the pgstore is initialized again
 - THEN the initialization MUST succeed without error
 - AND existing data MUST NOT be modified or deleted
@@ -70,7 +70,7 @@ The `user_id` column MUST reference `cloud_users(id)` with a foreign key constra
 #### Scenario: Create a cloud session
 
 - GIVEN an authenticated user with id "u-123"
-- WHEN a session is created with id "sess-abc", project "engram", directory "/work/engram"
+- WHEN a session is created with id "sess-abc", project "mnemo", directory "/work/mnemo"
 - THEN a row MUST be inserted into `cloud_sessions` with user_id "u-123"
 - AND `started_at` MUST be set to the current timestamp
 - AND `ended_at` MUST be NULL
@@ -440,7 +440,7 @@ The JWT access token MUST contain the following claims:
 | `iat` | number | Issued-at time (Unix timestamp) |
 | `type` | string | Token type: "access" or "refresh" |
 
-The system MUST use HMAC-SHA256 (HS256) for signing. The signing secret MUST be configurable via environment variable (`ENGRAM_JWT_SECRET`). The secret MUST be at least 32 bytes.
+The system MUST use HMAC-SHA256 (HS256) for signing. The signing secret MUST be configurable via environment variable (`MNEMO_JWT_SECRET`). The secret MUST be at least 32 bytes.
 
 #### Scenario: Decode a valid access token
 
@@ -457,7 +457,7 @@ The system MUST use HMAC-SHA256 (HS256) for signing. The signing secret MUST be 
 
 ### Purpose
 
-An HTTP server that exposes the cloud Engram API, handling authentication, memory push/pull, search, and context retrieval. All routes (except auth endpoints) MUST be protected by the JWT middleware.
+An HTTP server that exposes the cloud Mnemo API, handling authentication, memory push/pull, search, and context retrieval. All routes (except auth endpoints) MUST be protected by the JWT middleware.
 
 ---
 
@@ -467,23 +467,23 @@ The cloud server MUST be configurable via environment variables:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ENGRAM_CLOUD_PORT` | No | 8080 | Server listen port |
-| `ENGRAM_DATABASE_URL` | Yes | - | PostgreSQL connection string |
-| `ENGRAM_JWT_SECRET` | Yes | - | JWT signing secret (>= 32 bytes) |
-| `ENGRAM_BCRYPT_COST` | No | 12 | bcrypt hashing cost |
+| `MNEMO_CLOUD_PORT` | No | 8080 | Server listen port |
+| `MNEMO_DATABASE_URL` | Yes | - | PostgreSQL connection string |
+| `MNEMO_JWT_SECRET` | Yes | - | JWT signing secret (>= 32 bytes) |
+| `MNEMO_BCRYPT_COST` | No | 12 | bcrypt hashing cost |
 
 The server MUST fail to start if required environment variables are missing.
 
 #### Scenario: Start server with valid config
 
-- GIVEN `ENGRAM_DATABASE_URL` and `ENGRAM_JWT_SECRET` are set
+- GIVEN `MNEMO_DATABASE_URL` and `MNEMO_JWT_SECRET` are set
 - WHEN the cloud server starts
 - THEN it MUST listen on the configured port
 - AND the health endpoint MUST respond with 200
 
 #### Scenario: Start server with missing DATABASE_URL
 
-- GIVEN `ENGRAM_DATABASE_URL` is not set
+- GIVEN `MNEMO_DATABASE_URL` is not set
 - WHEN the cloud server attempts to start
 - THEN it MUST exit with a non-zero code
 - AND the error message MUST indicate the missing variable
@@ -498,7 +498,7 @@ The system MUST expose `GET /health` without authentication.
 ```json
 {
     "status": "ok",
-    "service": "engram-cloud",
+    "service": "mnemo-cloud",
     "version": "0.1.0"
 }
 ```
@@ -508,7 +508,7 @@ The system MUST expose `GET /health` without authentication.
 - GIVEN the cloud server is running
 - WHEN `GET /health` is called without authentication
 - THEN the response MUST be HTTP 200
-- AND the body MUST contain `"status": "ok"` and `"service": "engram-cloud"`
+- AND the body MUST contain `"status": "ok"` and `"service": "mnemo-cloud"`
 
 ---
 
@@ -726,7 +726,7 @@ The system MUST expose `GET /sync/search` (authenticated) for full-text search o
             "type": "decision",
             "title": "Use JWT",
             "content": "We chose JWT for auth...",
-            "project": "engram",
+            "project": "mnemo",
             "scope": "project",
             "rank": 0.95,
             "created_at": "2026-03-07T10:00:00Z",
@@ -775,14 +775,14 @@ The system MUST expose `GET /sync/context` (authenticated) that returns a format
 **Response (200 OK):**
 ```json
 {
-    "context": "# Session: engram (2026-03-07)\n\n## Decisions\n- Use JWT for auth\n..."
+    "context": "# Session: mnemo (2026-03-07)\n\n## Decisions\n- Use JWT for auth\n..."
 }
 ```
 
 #### Scenario: Get context for a project
 
-- GIVEN user "u-123" has observations for project "engram"
-- WHEN `GET /sync/context?project=engram` is called
+- GIVEN user "u-123" has observations for project "mnemo"
+- WHEN `GET /sync/context?project=mnemo` is called
 - THEN the response MUST contain a formatted context string
 - AND the context MUST only include observations belonging to user "u-123"
 
@@ -929,14 +929,14 @@ The system MUST accept cloud connection configuration:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `server_url` | Yes | Cloud server base URL (e.g., `https://engram.example.com`) |
+| `server_url` | Yes | Cloud server base URL (e.g., `https://mnemo.example.com`) |
 | `token` | Yes | JWT access token or API key (`eng_` prefixed) |
 
 The system MUST validate the URL format. The system MUST support both HTTPS and HTTP (for local development). The system SHOULD warn when using HTTP in non-localhost contexts.
 
 #### Scenario: Configure remote client
 
-- GIVEN server_url "https://engram.example.com" and a valid token
+- GIVEN server_url "https://mnemo.example.com" and a valid token
 - WHEN a RemoteClient is created
 - THEN the client MUST store the URL and token
 - AND all subsequent requests MUST use the configured URL as base
@@ -949,7 +949,7 @@ The system MUST validate the URL format. The system MUST support both HTTPS and 
 
 ---
 
-## Domain 5: CLI Integration (cmd/engram)
+## Domain 5: CLI Integration (cmd/mnemo)
 
 ### Purpose
 
@@ -963,22 +963,22 @@ The system MUST add the following global flags to the CLI:
 
 | Flag | Short | Env Var | Description |
 |------|-------|---------|-------------|
-| `--remote` | `-r` | `ENGRAM_REMOTE_URL` | Cloud server URL |
-| `--token` | `-t` | `ENGRAM_TOKEN` | Authentication token |
+| `--remote` | `-r` | `MNEMO_REMOTE_URL` | Cloud server URL |
+| `--token` | `-t` | `MNEMO_TOKEN` | Authentication token |
 
-When `--remote` is provided, applicable commands (search, context, sync) MUST operate against the cloud server instead of the local SQLite store. The token MAY also be read from a config file at `~/.engram/cloud.json`.
+When `--remote` is provided, applicable commands (search, context, sync) MUST operate against the cloud server instead of the local SQLite store. The token MAY also be read from a config file at `~/.mnemo/cloud.json`.
 
 #### Scenario: Search against cloud
 
-- GIVEN `--remote https://engram.example.com --token eng_abc123`
-- WHEN `engram search "authentication"` is run
+- GIVEN `--remote https://mnemo.example.com --token eng_abc123`
+- WHEN `mnemo search "authentication"` is run
 - THEN the search MUST be performed against the cloud server's `/sync/search` endpoint
 - AND the results MUST be displayed in the same format as local search
 
 #### Scenario: Default to local mode
 
 - GIVEN no `--remote` flag is provided
-- WHEN `engram search "authentication"` is run
+- WHEN `mnemo search "authentication"` is run
 - THEN the search MUST be performed against the local SQLite store
 - AND no network requests MUST be made
 
@@ -986,27 +986,27 @@ When `--remote` is provided, applicable commands (search, context, sync) MUST op
 
 ### CLI-02: Cloud Subcommand
 
-The system MUST add an `engram cloud` subcommand group:
+The system MUST add an `mnemo cloud` subcommand group:
 
 | Subcommand | Description |
 |------------|-------------|
-| `engram cloud register` | Register a new account |
-| `engram cloud login` | Login and save token |
-| `engram cloud sync` | Push and pull chunks |
-| `engram cloud status` | Show sync status |
-| `engram cloud api-key` | Generate/show API key |
+| `mnemo cloud register` | Register a new account |
+| `mnemo cloud login` | Login and save token |
+| `mnemo cloud sync` | Push and pull chunks |
+| `mnemo cloud status` | Show sync status |
+| `mnemo cloud api-key` | Generate/show API key |
 
 #### Scenario: Cloud register
 
 - GIVEN no saved credentials
-- WHEN `engram cloud register --server https://engram.example.com` is run
+- WHEN `mnemo cloud register --server https://mnemo.example.com` is run
 - THEN the CLI MUST prompt for username, email, and password
-- AND on success, the token MUST be saved to `~/.engram/cloud.json`
+- AND on success, the token MUST be saved to `~/.mnemo/cloud.json`
 
 #### Scenario: Cloud sync
 
-- GIVEN valid credentials saved in `~/.engram/cloud.json`
-- WHEN `engram cloud sync` is run
+- GIVEN valid credentials saved in `~/.mnemo/cloud.json`
+- WHEN `mnemo cloud sync` is run
 - THEN the CLI MUST push local chunks and pull remote chunks
 - AND a summary MUST be printed showing what was synced
 
@@ -1014,11 +1014,11 @@ The system MUST add an `engram cloud` subcommand group:
 
 ### CLI-03: Cloud Configuration File
 
-The system MUST support saving cloud credentials to `~/.engram/cloud.json`:
+The system MUST support saving cloud credentials to `~/.mnemo/cloud.json`:
 
 ```json
 {
-    "server_url": "https://engram.example.com",
+    "server_url": "https://mnemo.example.com",
     "token": "eng_abc123...",
     "user_id": "uuid",
     "username": "alice"
@@ -1029,14 +1029,14 @@ The file MUST be created with permissions `0600` (owner read/write only). The sy
 
 #### Scenario: Load token from config file
 
-- GIVEN `~/.engram/cloud.json` contains a valid token
+- GIVEN `~/.mnemo/cloud.json` contains a valid token
 - AND no `--token` flag is provided
-- WHEN `engram cloud sync` is run
+- WHEN `mnemo cloud sync` is run
 - THEN the token from the config file MUST be used
 
 #### Scenario: CLI flag overrides config file
 
-- GIVEN `~/.engram/cloud.json` contains token "eng_old"
+- GIVEN `~/.mnemo/cloud.json` contains token "eng_old"
 - AND `--token eng_new` is provided
 - WHEN a cloud command is run
 - THEN the token "eng_new" MUST be used
@@ -1045,25 +1045,25 @@ The file MUST be created with permissions `0600` (owner read/write only). The sy
 
 ### CLI-04: Cloud Server Command
 
-The system MUST add `engram cloud serve` to start the cloud server:
+The system MUST add `mnemo cloud serve` to start the cloud server:
 
 ```
-engram cloud serve [--port 8080] [--database-url postgres://...]
+mnemo cloud serve [--port 8080] [--database-url postgres://...]
 ```
 
 This MUST start the cloud HTTP server with PostgreSQL backend. Configuration MUST fall back to environment variables if flags are not provided.
 
 #### Scenario: Start cloud server via CLI
 
-- GIVEN `ENGRAM_DATABASE_URL` is set
-- WHEN `engram cloud serve --port 9090` is run
+- GIVEN `MNEMO_DATABASE_URL` is set
+- WHEN `mnemo cloud serve --port 9090` is run
 - THEN the cloud server MUST start on port 9090
 - AND the health endpoint MUST respond at `http://localhost:9090/health`
 
 #### Scenario: Start without database URL
 
-- GIVEN `ENGRAM_DATABASE_URL` is not set and `--database-url` is not provided
-- WHEN `engram cloud serve` is run
+- GIVEN `MNEMO_DATABASE_URL` is not set and `--database-url` is not provided
+- WHEN `mnemo cloud serve` is run
 - THEN the CLI MUST exit with an error message indicating the database URL is required
 
 ---
@@ -1280,7 +1280,7 @@ The system MUST reject chunks larger than 50MB.
 
 ```sql
 -- ============================================================
--- Engram Cloud Schema
+-- Mnemo Cloud Schema
 -- ============================================================
 
 -- Users

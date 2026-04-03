@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
 // TracesPage renders the main traces list view.
@@ -106,7 +106,7 @@ func TracesPage(traces []cloudstore.ToolCall, total int) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				if tc.IsEngram {
+				if tc.IsMnemo {
 					templ_7745c5c3_Err = StatusBadge(tc.ToolName, "muted").Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
@@ -317,7 +317,7 @@ func TracesSessionPage(sessionID string, traces []cloudstore.ToolCall, total int
 						return templ_7745c5c3_Err
 					}
 				}
-				if tc.IsEngram {
+				if tc.IsMnemo {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"badge badge-success\">mnemo</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err

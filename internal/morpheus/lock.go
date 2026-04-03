@@ -1,7 +1,7 @@
-// Package dream implements background memory consolidation for engram.
+// Package dream implements background memory consolidation for mnemo.
 //
 // It adapts Claude Code's autoDream 4-phase pattern (orient, gather,
-// consolidate, prune) to periodically merge and clean up engram
+// consolidate, prune) to periodically merge and clean up mnemo
 // observations, keeping memory lean and contradiction-free.
 package morpheus
 

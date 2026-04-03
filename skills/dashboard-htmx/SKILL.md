@@ -1,11 +1,11 @@
 ---
 name: dashboard-htmx
 description: >
-  HTMX and templ interaction rules for the Engram dashboard. Trigger: Any
+  HTMX and templ interaction rules for the Mnemo dashboard. Trigger: Any
   change to htmx attributes, partial updates, forms, or server-rendered browser UI.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

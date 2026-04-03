@@ -1,11 +1,11 @@
 /**
- * Engram — OpenCode plugin adapter
+ * Mnemo — OpenCode plugin adapter
  *
- * Thin layer that connects OpenCode's event system to the Engram Go binary.
+ * Thin layer that connects OpenCode's event system to the Mnemo Go binary.
  * The Go binary runs as a local HTTP server and handles all persistence.
  *
  * Flow:
- *   OpenCode events → this plugin → HTTP calls → engram serve → SQLite
+ *   OpenCode events → this plugin → HTTP calls → mnemo serve → SQLite
  *
  * Session resilience:
  *   Uses `ensureSession()` before any DB write. This means sessions are
@@ -18,12 +18,16 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-const ENGRAM_PORT = parseInt(process.env.ENGRAM_PORT ?? "7437")
-const ENGRAM_URL = `http://127.0.0.1:${ENGRAM_PORT}`
-const ENGRAM_BIN = process.env.ENGRAM_BIN ?? "engram"
+const MNEMO_PORT = parseInt(process.env.MNEMO_PORT ?? "7437")
+const MNEMO_URL = `http://127.0.0.1:${MNEMO_PORT}`
+const MNEMO_BIN = process.env.MNEMO_BIN ?? "mnemo"
 
-// Engram's own MCP tools — don't count these as "tool calls" for session stats
-const ENGRAM_TOOLS = new Set([
+// Cloud trace endpoint (jarvis-dashboard)
+const CLOUD_URL = process.env.MNEMO_CLOUD_URL // e.g. http://100.71.66.54:8080
+const CLOUD_API_KEY = process.env.MNEMO_CLOUD_API_KEY
+
+// Mnemo's own MCP tools — don't count these as "tool calls" for session stats
+const MNEMO_TOOLS = new Set([
   "mem_search",
   "mem_save",
   "mem_update",
@@ -42,9 +46,9 @@ const ENGRAM_TOOLS = new Set([
 // ─── Memory Instructions ─────────────────────────────────────────────────────
 // These get injected into the agent's context so it knows to call mem_save.
 
-const MEMORY_INSTRUCTIONS = `## Engram Persistent Memory — Protocol
+const MEMORY_INSTRUCTIONS = `## Mnemo Persistent Memory — Protocol
 
-You have access to Engram, a persistent memory system that survives across sessions and compactions.
+You have access to Mnemo, a persistent memory system that survives across sessions and compactions.
 
 ### WHEN TO SAVE (mandatory — not optional)
 
@@ -123,26 +127,26 @@ Do not skip step 1. Without it, everything done before compaction is lost from m
 
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
 
-async function engramFetch(
+async function mnemoFetch(
   path: string,
   opts: { method?: string; body?: any } = {}
 ): Promise<any> {
   try {
-    const res = await fetch(`${ENGRAM_URL}${path}`, {
+    const res = await fetch(`${MNEMO_URL}${path}`, {
       method: opts.method ?? "GET",
       headers: opts.body ? { "Content-Type": "application/json" } : undefined,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     })
     return await res.json()
   } catch {
-    // Engram server not running — silently fail
+    // Mnemo server not running — silently fail
     return null
   }
 }
 
-async function isEngramRunning(): Promise<boolean> {
+async function isMnemoRunning(): Promise<boolean> {
   try {
-    const res = await fetch(`${ENGRAM_URL}/health`, {
+    const res = await fetch(`${MNEMO_URL}/health`, {
       signal: AbortSignal.timeout(500),
     })
     return res.ok
@@ -163,7 +167,7 @@ function truncate(str: string, max: number): string {
 }
 
 /**
- * Strip <private>...</private> tags before sending to engram.
+ * Strip <private>...</private> tags before sending to mnemo.
  * Double safety: the Go binary also strips, but we strip here too
  * so sensitive data never even hits the wire.
  */
@@ -174,23 +178,23 @@ function stripPrivateTags(str: string): string {
 
 // ─── Plugin Export ───────────────────────────────────────────────────────────
 
-export const Engram: Plugin = async (ctx) => {
+export const Mnemo: Plugin = async (ctx) => {
   const project = extractProjectName(ctx.directory)
 
   // Track tool counts per session (in-memory only, not critical)
   const toolCounts = new Map<string, number>()
 
-  // Track which sessions we've already ensured exist in engram
+  // Track which sessions we've already ensured exist in mnemo
   const knownSessions = new Set<string>()
 
   /**
-   * Ensure a session exists in engram. Idempotent — calls POST /sessions
+   * Ensure a session exists in mnemo. Idempotent — calls POST /sessions
    * which uses INSERT OR IGNORE. Safe to call multiple times.
    */
   async function ensureSession(sessionId: string): Promise<void> {
     if (!sessionId || knownSessions.has(sessionId)) return
     knownSessions.add(sessionId)
-    await engramFetch("/sessions", {
+    await mnemoFetch("/sessions", {
       method: "POST",
       body: {
         id: sessionId,
@@ -200,11 +204,11 @@ export const Engram: Plugin = async (ctx) => {
     })
   }
 
-  // Try to start engram server if not running
-  const running = await isEngramRunning()
+  // Try to start mnemo server if not running
+  const running = await isMnemoRunning()
   if (!running) {
     try {
-      Bun.spawn([ENGRAM_BIN, "serve"], {
+      Bun.spawn([MNEMO_BIN, "serve"], {
         stdout: "ignore",
         stderr: "ignore",
         stdin: "ignore",
@@ -215,15 +219,15 @@ export const Engram: Plugin = async (ctx) => {
     }
   }
 
-  // Auto-import: if .engram/manifest.json exists in the project repo,
-  // run `engram sync --import` to load any new chunks into the local DB.
+  // Auto-import: if .mnemo/manifest.json exists in the project repo,
+  // run `mnemo sync --import` to load any new chunks into the local DB.
   // This is how git-synced memories get loaded when cloning a repo or
   // pulling changes. Each chunk is imported only once (tracked by ID).
   try {
-    const manifestFile = `${ctx.directory}/.engram/manifest.json`
+    const manifestFile = `${ctx.directory}/.mnemo/manifest.json`
     const file = Bun.file(manifestFile)
     if (await file.exists()) {
-      Bun.spawn([ENGRAM_BIN, "sync", "--import"], {
+      Bun.spawn([MNEMO_BIN, "sync", "--import"], {
         cwd: ctx.directory,
         stdout: "ignore",
         stderr: "ignore",
@@ -272,7 +276,7 @@ export const Engram: Plugin = async (ctx) => {
           // Only capture non-trivial prompts (>10 chars)
           if (content.length > 10) {
             await ensureSession(sessionId)
-            await engramFetch("/prompts", {
+            await mnemoFetch("/prompts", {
               method: "POST",
               body: {
                 session_id: sessionId,
@@ -285,14 +289,16 @@ export const Engram: Plugin = async (ctx) => {
       }
     },
 
-    // ─── Tool Execution Hook ─────────────────────────────────────
-    // Count tool calls per session (for session end stats).
-    // Also ensures the session exists — handles plugin reload / reconnect.
-    // Passive capture: when a Task tool completes, POST its output to
-    // the passive capture endpoint so the server extracts learnings.
+    // ─── Tool Execution Hooks ────────────────────────────────────
+    // Before: record start time for duration tracking.
+    // After: count tool calls, passive capture, and POST trace to cloud.
+
+    "tool.execute.before": async (input) => {
+      ;(input as any).__traceStartTime = Date.now()
+    },
 
     "tool.execute.after": async (input, output) => {
-      if (ENGRAM_TOOLS.has(input.tool.toLowerCase())) return
+      if (MNEMO_TOOLS.has(input.tool.toLowerCase())) return
 
       // input.sessionID comes from OpenCode — always available
       const sessionId = input.sessionID
@@ -305,7 +311,7 @@ export const Engram: Plugin = async (ctx) => {
       if (input.tool === "Task" && output && sessionId) {
         const text = typeof output === "string" ? output : JSON.stringify(output)
         if (text.length > 50) {
-          await engramFetch("/observations/passive", {
+          await mnemoFetch("/observations/passive", {
             method: "POST",
             body: {
               session_id: sessionId,
@@ -316,11 +322,35 @@ export const Engram: Plugin = async (ctx) => {
           })
         }
       }
+
+      // Cloud trace: POST tool call to mnemo cloud (fire-and-forget)
+      if (CLOUD_URL && CLOUD_API_KEY && sessionId) {
+        const outputStr = typeof output === "string" ? output : JSON.stringify(output)
+        const isMnemo = MNEMO_TOOLS.has(input.tool.toLowerCase())
+
+        fetch(`${CLOUD_URL}/traces/tool-call`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${CLOUD_API_KEY}`,
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            project: project || "",
+            agent: "opencode",
+            tool_name: input.tool || "unknown",
+            input_json: (input as any).params ?? {},
+            output_text: stripPrivateTags(truncate(outputStr, 10000)),
+            duration_ms: Date.now() - ((input as any).__traceStartTime || Date.now()),
+            is_mnemo_legacy: isMnemo,
+          }),
+        }).catch(() => {}) // fire-and-forget — NEVER block tool execution
+      }
     },
 
     // ─── System Prompt: Always-on memory instructions ──────────
     // Injects MEMORY_INSTRUCTIONS into the system prompt of every message.
-    // This ensures the agent ALWAYS knows about Engram, even after compaction.
+    // This ensures the agent ALWAYS knows about Mnemo, even after compaction.
     //
     // We append to the last existing system entry instead of pushing a new one.
     // Some models (Qwen3.5, Mistral/Ministral via llama.cpp) reject multiple
@@ -350,7 +380,7 @@ export const Engram: Plugin = async (ctx) => {
       }
 
       // Inject context from previous sessions
-      const data = await engramFetch(
+      const data = await mnemoFetch(
         `/context?project=${encodeURIComponent(project)}`
       )
       if (data?.context) {
@@ -358,11 +388,11 @@ export const Engram: Plugin = async (ctx) => {
       }
 
       // Tell the compressor to instruct the new agent to persist the
-      // compacted summary to Engram. The new agent reads the compacted
+      // compacted summary to Mnemo. The new agent reads the compacted
       // summary and this instruction, then saves it as a session summary.
       output.context.push(
         `CRITICAL INSTRUCTION FOR COMPACTED SUMMARY:\n` +
-        `The agent has access to Engram persistent memory via MCP tools.\n` +
+        `The agent has access to Mnemo persistent memory via MCP tools.\n` +
         `You MUST include the following instruction at the TOP of the compacted summary:\n\n` +
         `"FIRST ACTION REQUIRED: Call mem_session_summary with the content of this compacted summary. ` +
         `Use project: '${project}'. This preserves what was accomplished before compaction. Do this BEFORE any other work."\n\n` +

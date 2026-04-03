@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/athena"
+	"github.com/MiguelAguiarDEV/mnemo/internal/athena"
 )
 
 // ─── Defaults ─────────────────────────────────────────────────────────────
@@ -23,10 +23,10 @@ const (
 // Consolidator orchestrates the 4-phase memory consolidation cycle:
 // orient -> gather -> consolidate -> prune.
 //
-// It uses the engram CLI for observation read/write and a lock file
+// It uses the mnemo CLI for observation read/write and a lock file
 // whose mtime doubles as the "last consolidated at" timestamp.
 type Consolidator struct {
-	engramBin  string
+	mnemoBin  string
 	runner     athena.CommandRunner
 	lock       *lockFile
 	logger     *slog.Logger
@@ -39,9 +39,9 @@ type Consolidator struct {
 // Option configures a Consolidator.
 type Option func(*Consolidator)
 
-// WithEngramBin sets the path to the engram CLI binary.
-func WithEngramBin(bin string) Option {
-	return func(c *Consolidator) { c.engramBin = bin }
+// WithMnemoBin sets the path to the mnemo CLI binary.
+func WithMnemoBin(bin string) Option {
+	return func(c *Consolidator) { c.mnemoBin = bin }
 }
 
 // WithLockPath sets the lock file path.
@@ -82,7 +82,7 @@ func WithCommandRunner(r athena.CommandRunner) Option {
 // New creates a Consolidator with the given options.
 func New(opts ...Option) *Consolidator {
 	c := &Consolidator{
-		engramBin:  "engram",
+		mnemoBin:  "mnemo",
 		runner:     athena.DefaultCommandRunner(),
 		logger:     slog.Default(),
 		minAge:     DefaultMinAge,
@@ -93,7 +93,7 @@ func New(opts ...Option) *Consolidator {
 		opt(c)
 	}
 	if c.lock == nil {
-		c.lock = newLockFile("/tmp/engram-consolidate.lock")
+		c.lock = newLockFile("/tmp/mnemo-consolidate.lock")
 	}
 	return c
 }

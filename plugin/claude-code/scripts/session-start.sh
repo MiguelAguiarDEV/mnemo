@@ -1,13 +1,13 @@
 #!/bin/bash
-# Engram — SessionStart hook for Claude Code
+# Mnemo — SessionStart hook for Claude Code
 #
-# 1. Ensures the engram server is running
-# 2. Creates a session in engram
-# 3. Auto-imports git-synced chunks if .engram/manifest.json exists
+# 1. Ensures the mnemo server is running
+# 2. Creates a session in mnemo
+# 3. Auto-imports git-synced chunks if .mnemo/manifest.json exists
 # 4. Injects Memory Protocol instructions + memory context
 
-ENGRAM_PORT="${ENGRAM_PORT:-7437}"
-ENGRAM_URL="http://127.0.0.1:${ENGRAM_PORT}"
+MNEMO_PORT="${MNEMO_PORT:-7437}"
+MNEMO_URL="http://127.0.0.1:${MNEMO_PORT}"
 
 # Read hook input from stdin
 INPUT=$(cat)
@@ -15,15 +15,15 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 PROJECT=$(basename "$CWD")
 
-# Ensure engram server is running
-if ! curl -sf "${ENGRAM_URL}/health" --max-time 1 > /dev/null 2>&1; then
-  engram serve &>/dev/null &
+# Ensure mnemo server is running
+if ! curl -sf "${MNEMO_URL}/health" --max-time 1 > /dev/null 2>&1; then
+  mnemo serve &>/dev/null &
   sleep 0.5
 fi
 
 # Create session
 if [ -n "$SESSION_ID" ] && [ -n "$PROJECT" ]; then
-  curl -sf "${ENGRAM_URL}/sessions" \
+  curl -sf "${MNEMO_URL}/sessions" \
     -X POST \
     -H "Content-Type: application/json" \
     -d "{\"id\":\"${SESSION_ID}\",\"project\":\"${PROJECT}\",\"directory\":\"${CWD}\"}" \
@@ -31,18 +31,18 @@ if [ -n "$SESSION_ID" ] && [ -n "$PROJECT" ]; then
 fi
 
 # Auto-import git-synced chunks
-if [ -f "${CWD}/.engram/manifest.json" ]; then
-  engram sync --import 2>/dev/null
+if [ -f "${CWD}/.mnemo/manifest.json" ]; then
+  mnemo sync --import 2>/dev/null
 fi
 
 # Fetch memory context
-CONTEXT=$(curl -sf "${ENGRAM_URL}/context?project=${PROJECT}" --max-time 3 2>/dev/null | jq -r '.context // empty')
+CONTEXT=$(curl -sf "${MNEMO_URL}/context?project=${PROJECT}" --max-time 3 2>/dev/null | jq -r '.context // empty')
 
 # Inject Memory Protocol + context — stdout goes to Claude as additionalContext
 cat <<'PROTOCOL'
-## Engram Persistent Memory — ACTIVE PROTOCOL
+## Mnemo Persistent Memory — ACTIVE PROTOCOL
 
-You have engram memory tools (mem_save, mem_search, mem_context, mem_session_summary).
+You have mnemo memory tools (mem_save, mem_search, mem_context, mem_session_summary).
 This protocol is MANDATORY and ALWAYS ACTIVE.
 
 ### PROACTIVE SAVE — do NOT wait for user to ask

@@ -1,11 +1,11 @@
 ---
 name: memory-protocol
 description: >
-  Persistent memory discipline for Engram contributors.
+  Persistent memory discipline for Mnemo contributors.
   Trigger: Decisions, bugfixes, discoveries, preferences, or session closure.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

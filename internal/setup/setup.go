@@ -59,30 +59,30 @@ type Result struct {
 	Files       int
 }
 
-const claudeCodeMarketplace = "Gentleman-Programming/engram"
+const claudeCodeMarketplace = "MiguelAguiarDEV/mnemo"
 
-// claudeCodeMCPTools are the MCP tool names registered by the engram plugin
+// claudeCodeMCPTools are the MCP tool names registered by the mnemo plugin
 // in Claude Code. Adding these to ~/.claude/settings.json permissions.allow
 // prevents Claude Code from prompting for confirmation on every tool call.
 var claudeCodeMCPTools = []string{
-	"mcp__plugin_engram_engram__mem_capture_passive",
-	"mcp__plugin_engram_engram__mem_context",
-	"mcp__plugin_engram_engram__mem_get_observation",
-	"mcp__plugin_engram_engram__mem_save",
-	"mcp__plugin_engram_engram__mem_save_prompt",
-	"mcp__plugin_engram_engram__mem_search",
-	"mcp__plugin_engram_engram__mem_session_end",
-	"mcp__plugin_engram_engram__mem_session_start",
-	"mcp__plugin_engram_engram__mem_session_summary",
-	"mcp__plugin_engram_engram__mem_suggest_topic_key",
-	"mcp__plugin_engram_engram__mem_update",
+	"mcp__plugin_mnemo_mnemo__mem_capture_passive",
+	"mcp__plugin_mnemo_mnemo__mem_context",
+	"mcp__plugin_mnemo_mnemo__mem_get_observation",
+	"mcp__plugin_mnemo_mnemo__mem_save",
+	"mcp__plugin_mnemo_mnemo__mem_save_prompt",
+	"mcp__plugin_mnemo_mnemo__mem_search",
+	"mcp__plugin_mnemo_mnemo__mem_session_end",
+	"mcp__plugin_mnemo_mnemo__mem_session_start",
+	"mcp__plugin_mnemo_mnemo__mem_session_summary",
+	"mcp__plugin_mnemo_mnemo__mem_suggest_topic_key",
+	"mcp__plugin_mnemo_mnemo__mem_update",
 }
 
-const codexEngramBlock = "[mcp_servers.engram]\ncommand = \"engram\"\nargs = [\"mcp\", \"--tools=agent\"]"
+const codexMnemoBlock = "[mcp_servers.mnemo]\ncommand = \"mnemo\"\nargs = [\"mcp\", \"--tools=agent\"]"
 
-const memoryProtocolMarkdown = `## Engram Persistent Memory — Protocol
+const memoryProtocolMarkdown = `## Mnemo Persistent Memory — Protocol
 
-You have access to Engram, a persistent memory system that survives across sessions and compactions.
+You have access to Mnemo, a persistent memory system that survives across sessions and compactions.
 
 ### WHEN TO SAVE (mandatory — not optional)
 
@@ -152,7 +152,7 @@ This is NOT optional. If you skip this, the next session starts blind.
 ### PASSIVE CAPTURE — automatic learning extraction
 
 When completing a task or subtask, include a "## Key Learnings:" section at the end of your response
-with numbered items. Engram will automatically extract and save these as observations.
+with numbered items. Mnemo will automatically extract and save these as observations.
 
 Example:
 ## Key Learnings:
@@ -173,7 +173,7 @@ If you see a message about compaction or context reset, or if you see "FIRST ACT
 Do not skip step 1. Without it, everything done before compaction is lost from memory.
 `
 
-const codexCompactPromptMarkdown = `You are compacting a coding session that uses Engram persistent memory.
+const codexCompactPromptMarkdown = `You are compacting a coding session that uses Mnemo persistent memory.
 
 You MUST prepend this exact sentence at the top of the compacted summary:
 
@@ -238,23 +238,23 @@ func installOpenCode() (*Result, error) {
 		return nil, fmt.Errorf("create plugin dir %s: %w", dir, err)
 	}
 
-	data, err := openCodeReadFile("plugins/opencode/engram.ts")
+	data, err := openCodeReadFile("plugins/opencode/mnemo.ts")
 	if err != nil {
-		return nil, fmt.Errorf("read embedded engram.ts: %w", err)
+		return nil, fmt.Errorf("read embedded mnemo.ts: %w", err)
 	}
 
-	dest := filepath.Join(dir, "engram.ts")
+	dest := filepath.Join(dir, "mnemo.ts")
 	if err := openCodeWriteFileFn(dest, data, 0644); err != nil {
 		return nil, fmt.Errorf("write %s: %w", dest, err)
 	}
 
-	// Register engram MCP server in opencode.json
+	// Register mnemo MCP server in opencode.json
 	files := 1
 	if err := injectOpenCodeMCPFn(); err != nil {
 		// Non-fatal: plugin works, MCP just needs manual config
 		fmt.Fprintf(os.Stderr, "warning: could not auto-register MCP server in opencode.json: %v\n", err)
 		fmt.Fprintf(os.Stderr, "  Add manually to your opencode.json under \"mcp\":\n")
-		fmt.Fprintf(os.Stderr, "  \"engram\": { \"type\": \"local\", \"command\": [\"engram\", \"mcp\", \"--tools=agent\"], \"enabled\": true }\n")
+		fmt.Fprintf(os.Stderr, "  \"mnemo\": { \"type\": \"local\", \"command\": [\"mnemo\", \"mcp\", \"--tools=agent\"], \"enabled\": true }\n")
 	} else {
 		files = 2
 	}
@@ -266,8 +266,8 @@ func installOpenCode() (*Result, error) {
 	}, nil
 }
 
-// injectOpenCodeMCP adds the engram MCP server entry to opencode.json.
-// It reads the existing config, adds/updates the engram entry under "mcp",
+// injectOpenCodeMCP adds the mnemo MCP server entry to opencode.json.
+// It reads the existing config, adds/updates the mnemo entry under "mcp",
 // and writes it back preserving all other settings.
 func injectOpenCodeMCP() error {
 	configPath := openCodeConfigPath()
@@ -298,22 +298,22 @@ func injectOpenCodeMCP() error {
 		mcpBlock = make(map[string]json.RawMessage)
 	}
 
-	// Check if engram is already registered
-	if _, exists := mcpBlock["engram"]; exists {
+	// Check if mnemo is already registered
+	if _, exists := mcpBlock["mnemo"]; exists {
 		return nil // already registered, nothing to do
 	}
 
-	// Add engram MCP entry (agent profile — only tools agents need)
-	engramEntry := map[string]interface{}{
+	// Add mnemo MCP entry (agent profile — only tools agents need)
+	mnemoEntry := map[string]interface{}{
 		"type":    "local",
-		"command": []string{"engram", "mcp", "--tools=agent"},
+		"command": []string{"mnemo", "mcp", "--tools=agent"},
 		"enabled": true,
 	}
-	entryJSON, err := jsonMarshalFn(engramEntry)
+	entryJSON, err := jsonMarshalFn(mnemoEntry)
 	if err != nil {
-		return fmt.Errorf("marshal engram entry: %w", err)
+		return fmt.Errorf("marshal mnemo entry: %w", err)
 	}
-	mcpBlock["engram"] = json.RawMessage(entryJSON)
+	mcpBlock["mnemo"] = json.RawMessage(entryJSON)
 
 	// Write mcp block back to config
 	mcpJSON, err := jsonMarshalFn(mcpBlock)
@@ -430,7 +430,7 @@ func installClaudeCode() (*Result, error) {
 	}
 
 	// Step 2: Install the plugin
-	installOut, err := runCommand(claudeBin, "plugin", "install", "engram")
+	installOut, err := runCommand(claudeBin, "plugin", "install", "mnemo")
 	installOutputStr := strings.TrimSpace(string(installOut))
 	if err != nil {
 		// If plugin is already installed, that's fine
@@ -451,7 +451,7 @@ func claudeCodeSettingsPath() string {
 	return filepath.Join(home, ".claude", "settings.json")
 }
 
-// AddClaudeCodeAllowlist adds engram MCP tool names to ~/.claude/settings.json
+// AddClaudeCodeAllowlist adds mnemo MCP tool names to ~/.claude/settings.json
 // permissions.allow so Claude Code doesn't prompt for confirmation on each call.
 // Idempotent: skips tools already present in the list.
 func AddClaudeCodeAllowlist() error {
@@ -592,15 +592,15 @@ func injectGeminiMCP(configPath string) error {
 		mcpServers = make(map[string]json.RawMessage)
 	}
 
-	engramEntry := map[string]any{
-		"command": "engram",
+	mnemoEntry := map[string]any{
+		"command": "mnemo",
 		"args":    []string{"mcp", "--tools=agent"},
 	}
-	entryJSON, err := jsonMarshalFn(engramEntry)
+	entryJSON, err := jsonMarshalFn(mnemoEntry)
 	if err != nil {
-		return fmt.Errorf("marshal engram entry: %w", err)
+		return fmt.Errorf("marshal mnemo entry: %w", err)
 	}
-	mcpServers["engram"] = json.RawMessage(entryJSON)
+	mcpServers["mnemo"] = json.RawMessage(entryJSON)
 
 	mcpJSON, err := jsonMarshalFn(mcpServers)
 	if err != nil {
@@ -634,7 +634,7 @@ func writeGeminiSystemPrompt() error {
 }
 
 // removeGeminiEnvOverride removes any GEMINI_SYSTEM_MD line from ~/.gemini/.env.
-// Previous versions of engram added this line, but it causes Gemini CLI to look
+// Previous versions of mnemo added this line, but it causes Gemini CLI to look
 // for system.md relative to CWD instead of ~/.gemini/. Best-effort cleanup.
 func removeGeminiEnvOverride() {
 	envPath := geminiEnvPath()
@@ -700,7 +700,7 @@ func injectCodexMCP(configPath string) error {
 		return fmt.Errorf("read config: %w", err)
 	}
 
-	updated := upsertCodexEngramBlock(string(data))
+	updated := upsertCodexMnemoBlock(string(data))
 	if err := writeFileFn(configPath, []byte(updated), 0644); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
@@ -747,14 +747,14 @@ func injectCodexMemoryConfig(configPath, instructionsPath, compactPromptPath str
 	return nil
 }
 
-func upsertCodexEngramBlock(content string) string {
+func upsertCodexMnemoBlock(content string) string {
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	lines := strings.Split(content, "\n")
 
 	var kept []string
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == "[mcp_servers.engram]" {
+		if trimmed == "[mcp_servers.mnemo]" {
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
@@ -772,10 +772,10 @@ func upsertCodexEngramBlock(content string) string {
 
 	base := strings.TrimSpace(strings.Join(kept, "\n"))
 	if base == "" {
-		return codexEngramBlock + "\n"
+		return codexMnemoBlock + "\n"
 	}
 
-	return base + "\n\n" + codexEngramBlock + "\n"
+	return base + "\n\n" + codexMnemoBlock + "\n"
 }
 
 func upsertTopLevelTOMLString(content, key, value string) string {
@@ -852,9 +852,9 @@ func codexConfigPath() string {
 }
 
 func codexInstructionsPath() string {
-	return filepath.Join(filepath.Dir(codexConfigPath()), "engram-instructions.md")
+	return filepath.Join(filepath.Dir(codexConfigPath()), "mnemo-instructions.md")
 }
 
 func codexCompactPromptPath() string {
-	return filepath.Join(filepath.Dir(codexConfigPath()), "engram-compact-prompt.md")
+	return filepath.Join(filepath.Dir(codexConfigPath()), "mnemo-compact-prompt.md")
 }

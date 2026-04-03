@@ -1,5 +1,5 @@
 // Package autosync implements a lease-guarded background sync manager
-// for Engram's local-first cloud replication.
+// for Mnemo's local-first cloud replication.
 //
 // The manager runs in long-lived local processes (serve, mcp) and:
 //   - Acquires a SQLite-backed lease to prevent duplicate workers.
@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/remote"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 // ─── Phase Constants ─────────────────────────────────────────────────────────

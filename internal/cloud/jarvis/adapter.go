@@ -3,8 +3,8 @@ package jarvis
 import (
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/athena"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/athena"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
 // StoreAdapter wraps cloudstore.CloudStore to satisfy StoreInterface.

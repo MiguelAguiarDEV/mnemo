@@ -49,7 +49,7 @@ func (s *CloudServer) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSystemInfo returns GET /api/system with live host metrics.
-// This runs inside the engram container but reads /proc for host-level data.
+// This runs inside the mnemo container but reads /proc for host-level data.
 func (s *CloudServer) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)

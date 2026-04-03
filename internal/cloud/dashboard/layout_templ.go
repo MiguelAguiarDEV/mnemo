@@ -44,7 +44,7 @@ func Layout(title string, username string, activeTab string, isAdmin bool, conte
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " — Engram Cloud</title><link rel=\"stylesheet\" href=\"/dashboard/static/pico.min.css\"><link rel=\"stylesheet\" href=\"/dashboard/static/styles.css\"><script src=\"/dashboard/static/htmx.min.js\"></script></head><body class=\"shell-body\"><div class=\"shell-backdrop\"><div class=\"status-ribbon\"><span class=\"status-pill\">CLOUD ACTIVE</span> <span class=\"status-copy\">shared memory index / local-first replication / org policy controls</span></div><div class=\"app-shell\"><header class=\"shell-header\"><div class=\"brand-stack\"><a href=\"/dashboard/\" class=\"brand\">Engram Cloud</a><p class=\"brand-subtitle\">An elephant never forgets.</p></div><div class=\"user-info\"><span class=\"user-name\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " — Mnemo Cloud</title><link rel=\"stylesheet\" href=\"/dashboard/static/pico.min.css\"><link rel=\"stylesheet\" href=\"/dashboard/static/styles.css\"><script src=\"/dashboard/static/htmx.min.js\"></script></head><body class=\"shell-body\"><div class=\"shell-backdrop\"><div class=\"status-ribbon\"><span class=\"status-pill\">CLOUD ACTIVE</span> <span class=\"status-copy\">shared memory index / local-first replication / org policy controls</span></div><div class=\"app-shell\"><header class=\"shell-header\"><div class=\"brand-stack\"><a href=\"/dashboard/\" class=\"brand\">Mnemo Cloud</a><p class=\"brand-subtitle\">An elephant never forgets.</p></div><div class=\"user-info\"><span class=\"user-name\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -73,7 +73,7 @@ func Layout(title string, username string, activeTab string, isAdmin bool, conte
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</main><footer class=\"shell-footer\"><small>ENGRAM CLOUD / SHARED MEMORY INDEX / LIVE SYNC READY</small></footer></div></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</main><footer class=\"shell-footer\"><small>MNEMO CLOUD / SHARED MEMORY INDEX / LIVE SYNC READY</small></footer></div></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

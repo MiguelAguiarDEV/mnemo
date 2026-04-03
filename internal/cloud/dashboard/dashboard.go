@@ -1,4 +1,4 @@
-// Package dashboard provides a server-rendered web UI for Engram Cloud.
+// Package dashboard provides a server-rendered web UI for Mnemo Cloud.
 // It uses templ for HTML templating and htmx for partial page updates.
 // All static assets are embedded in the binary via go:embed.
 package dashboard
@@ -9,8 +9,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 )
 
 // Mount registers all dashboard routes on the given mux. It attaches:
@@ -626,7 +626,7 @@ func (h *handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // isAdmin checks if the current authenticated user is an admin.
-// Admin is determined by matching the ENGRAM_CLOUD_ADMIN email against
+// Admin is determined by matching the MNEMO_CLOUD_ADMIN email against
 // the user's email from context.
 func (h *handlers) isAdmin(r *http.Request) bool {
 	if h.cfg.AdminEmail == "" {

@@ -1,6 +1,6 @@
-// Package tui implements the Bubbletea terminal UI for Engram.
+// Package tui implements the Bubbletea terminal UI for Mnemo.
 //
-// Following the Gentleman Bubbletea patterns:
+// Following the Bubbletea patterns:
 // - Screen constants as iota
 // - Single Model struct holds ALL state
 // - Update() with type switch
@@ -10,9 +10,9 @@
 package tui
 
 import (
-	"github.com/Gentleman-Programming/engram/internal/setup"
-	"github.com/Gentleman-Programming/engram/internal/store"
-	"github.com/Gentleman-Programming/engram/internal/version"
+	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/version"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"

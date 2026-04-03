@@ -1,5 +1,5 @@
 // Package cloud_test contains end-to-end integration tests for the full
-// Engram Cloud sync pipeline: local SQLite -> export -> push to cloud server
+// Mnemo Cloud sync pipeline: local SQLite -> export -> push to cloud server
 // (httptest + dockertest Postgres) -> pull to second local SQLite -> verify.
 //
 // These tests cover spec requirements SYNC-04, NFR-05, ERR-01 through ERR-08.
@@ -18,13 +18,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudserver"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
-	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
-	"github.com/Gentleman-Programming/engram/internal/store"
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudserver"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/remote"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -55,7 +55,7 @@ func setupPostgres(t *testing.T) string {
 		Tag:        "16-alpine",
 		Env: []string{
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=engram_integration",
+			"POSTGRES_DB=mnemo_integration",
 			"POSTGRES_USER=postgres",
 		},
 	}, func(config *docker.HostConfig) {
@@ -70,7 +70,7 @@ func setupPostgres(t *testing.T) string {
 		_ = pool.Purge(resource)
 	})
 
-	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_integration?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_integration?sslmode=disable",
 		resource.GetPort("5432/tcp"))
 
 	if err := pool.Retry(func() error {
@@ -209,8 +209,8 @@ func TestFullRoundTrip(t *testing.T) {
 	t.Logf("Created observations: %d, %d, %d", obs1ID, obs2ID, obs3ID)
 
 	// Step 3: Export from local store A using FileTransport
-	syncDirA := filepath.Join(t.TempDir(), ".engram")
-	syncerA := engramsync.New(storeA, syncDirA)
+	syncDirA := filepath.Join(t.TempDir(), ".mnemo")
+	syncerA := mnemosync.New(storeA, syncDirA)
 	exportResult, err := syncerA.Export("alice", "my-project")
 	if err != nil {
 		t.Fatalf("Export from store A: %v", err)
@@ -237,12 +237,12 @@ func TestFullRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	syncerRemotePush := engramsync.NewWithTransport(storeA, remoteTransport)
+	syncerRemotePush := mnemosync.NewWithTransport(storeA, remoteTransport)
 
 	// The Syncer with RemoteTransport reads from local file transport manifest,
 	// so we need to push differently. We'll push chunks manually via the
 	// file transport's exported chunks read through the remote transport's WriteChunk.
-	fileTransport := engramsync.NewFileTransport(syncDirA)
+	fileTransport := mnemosync.NewFileTransport(syncDirA)
 	manifest, err := fileTransport.ReadManifest()
 	if err != nil {
 		t.Fatalf("ReadManifest from file transport: %v", err)
@@ -316,7 +316,7 @@ func TestFullRoundTrip(t *testing.T) {
 	}
 
 	// Use RemoteTransport with store B to import
-	syncerB := engramsync.NewWithTransport(storeB, remoteTransport)
+	syncerB := mnemosync.NewWithTransport(storeB, remoteTransport)
 	importResult, err := syncerB.Import()
 	if err != nil {
 		t.Fatalf("Import into store B: %v", err)
@@ -418,7 +418,7 @@ func TestPushWithNetworkFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	syncer := engramsync.NewWithTransport(storeA, transport)
+	syncer := mnemosync.NewWithTransport(storeA, transport)
 
 	_, err = syncer.Export("tester", "proj")
 	if err == nil {
@@ -476,7 +476,7 @@ func TestPullWithNetworkFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	syncer := engramsync.NewWithTransport(storeB, transport)
+	syncer := mnemosync.NewWithTransport(storeB, transport)
 
 	// Import should gracefully handle the failure -- the chunk will be
 	// skipped (counted in ChunksSkipped) because ReadChunk fails.
@@ -541,7 +541,7 @@ func TestTokenExpiryMidSync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	syncer := engramsync.NewWithTransport(storeC, transport)
+	syncer := mnemosync.NewWithTransport(storeC, transport)
 
 	_, err = syncer.Import()
 	if err != nil {
@@ -572,8 +572,8 @@ func TestDuplicatePushIdempotency(t *testing.T) {
 	storeA.CreateSession("sess-dup", "proj", "/dev")
 	addLocalObservation(t, storeA, "sess-dup", "Dup Test", "testing idempotency", "proj")
 
-	syncDir := filepath.Join(t.TempDir(), ".engram")
-	syncerA := engramsync.New(storeA, syncDir)
+	syncDir := filepath.Join(t.TempDir(), ".mnemo")
+	syncerA := mnemosync.New(storeA, syncDir)
 	result, err := syncerA.Export("bob", "proj")
 	if err != nil {
 		t.Fatalf("Export: %v", err)
@@ -587,7 +587,7 @@ func TestDuplicatePushIdempotency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	fileTransport := engramsync.NewFileTransport(syncDir)
+	fileTransport := mnemosync.NewFileTransport(syncDir)
 	manifest, _ := fileTransport.ReadManifest()
 
 	for _, entry := range manifest.Chunks {
@@ -775,7 +775,7 @@ func TestCloudServer503WhenDBUnreachable(t *testing.T) {
 		Tag:        "16-alpine",
 		Env: []string{
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=engram_503test",
+			"POSTGRES_DB=mnemo_503test",
 			"POSTGRES_USER=postgres",
 		},
 	}, func(config *docker.HostConfig) {
@@ -786,7 +786,7 @@ func TestCloudServer503WhenDBUnreachable(t *testing.T) {
 		t.Fatalf("could not start postgres container: %v", err)
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_503test?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_503test?sslmode=disable",
 		resource.GetPort("5432/tcp"))
 
 	// Wait for Postgres to be ready

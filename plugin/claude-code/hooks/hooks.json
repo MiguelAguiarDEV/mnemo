@@ -1,5 +1,5 @@
 {
-  "description": "Engram persistent memory hooks — session tracking, auto-import, compaction recovery, and passive capture",
+  "description": "Mnemo persistent memory hooks — session tracking, auto-import, compaction recovery, and passive capture",
   "hooks": {
     "SessionStart": [
       {
@@ -9,7 +9,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh",
             "timeout": 10,
-            "statusMessage": "Loading engram memory..."
+            "statusMessage": "Loading mnemo memory..."
           }
         ]
       },
@@ -20,7 +20,7 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/post-compaction.sh",
             "timeout": 10,
-            "statusMessage": "Recovering engram context after compaction..."
+            "statusMessage": "Recovering mnemo context after compaction..."
           }
         ]
       }

@@ -1,11 +1,11 @@
 ---
 name: server-api
 description: >
-  API contract guardrails for Engram server changes.
+  API contract guardrails for Mnemo server changes.
   Trigger: Any route, handler, payload, or status code modification.
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: MiguelAguiarDEV
   version: "1.0"
 ---
 

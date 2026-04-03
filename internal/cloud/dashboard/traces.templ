@@ -44,7 +44,7 @@ templ TracesPage(traces []cloudstore.ToolCall, total int) {
 										</a>
 									</td>
 									<td>
-										if tc.IsEngram {
+										if tc.IsMnemo {
 											@StatusBadge(tc.ToolName, "muted")
 										} else {
 											<strong>{ tc.ToolName }</strong>
@@ -104,8 +104,8 @@ templ TracesSessionPage(sessionID string, traces []cloudstore.ToolCall, total in
 							if tc.DurationMs != nil {
 								<span class="badge badge-muted">{ fmt.Sprintf("%dms", *tc.DurationMs) }</span>
 							}
-							if tc.IsEngram {
-								<span class="badge badge-success">engram</span>
+							if tc.IsMnemo {
+								<span class="badge badge-success">mnemo</span>
 							}
 						</summary>
 						<div class="trace-body">

@@ -585,7 +585,7 @@ func TestMemoryConsolidationCheck_Needed_Failure(t *testing.T) {
 
 func TestMemoryConsolidationCheck_NeedsFuncError(t *testing.T) {
 	fn := memoryConsolidationCheck(
-		func() (bool, error) { return false, errors.New("engram unavailable") },
+		func() (bool, error) { return false, errors.New("mnemo unavailable") },
 		func(ctx context.Context) error { return nil },
 	)
 	_, err := fn(context.Background())

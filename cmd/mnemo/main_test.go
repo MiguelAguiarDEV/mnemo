@@ -13,12 +13,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudserver"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
-	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudserver"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/remote"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 func testConfig(t *testing.T) store.Config {
@@ -371,7 +371,7 @@ func TestCmdContextAndStats(t *testing.T) {
 	if statsErr != "" {
 		t.Fatalf("expected no stderr from stats, got: %q", statsErr)
 	}
-	if !strings.Contains(statsOut, "Engram Memory Stats") || !strings.Contains(statsOut, "project-x") {
+	if !strings.Contains(statsOut, "Mnemo Memory Stats") || !strings.Contains(statsOut, "project-x") {
 		t.Fatalf("unexpected stats output: %q", statsOut)
 	}
 }
@@ -626,9 +626,9 @@ func TestMainExitHelper(t *testing.T) {
 // ─── Cloud CLI Tests ─────────────────────────────────────────────────────────
 
 func TestCmdCloudServeMissingDatabaseURL(t *testing.T) {
-	// Ensure ENGRAM_DATABASE_URL is not set
-	t.Setenv("ENGRAM_DATABASE_URL", "")
-	t.Setenv("ENGRAM_JWT_SECRET", "")
+	// Ensure MNEMO_DATABASE_URL is not set
+	t.Setenv("MNEMO_DATABASE_URL", "")
+	t.Setenv("MNEMO_JWT_SECRET", "")
 
 	exitCalled := false
 	exitCode := 0
@@ -645,14 +645,14 @@ func TestCmdCloudServeMissingDatabaseURL(t *testing.T) {
 	if !exitCalled || exitCode != 1 {
 		t.Fatalf("expected exit(1), got exitCalled=%v code=%d", exitCalled, exitCode)
 	}
-	if !strings.Contains(stderr, "ENGRAM_DATABASE_URL") {
+	if !strings.Contains(stderr, "MNEMO_DATABASE_URL") {
 		t.Fatalf("expected DATABASE_URL error in stderr, got: %q", stderr)
 	}
 }
 
 func TestCmdCloudServeMissingJWTSecret(t *testing.T) {
-	t.Setenv("ENGRAM_DATABASE_URL", "postgres://fake:fake@localhost:5432/fake")
-	t.Setenv("ENGRAM_JWT_SECRET", "")
+	t.Setenv("MNEMO_DATABASE_URL", "postgres://fake:fake@localhost:5432/fake")
+	t.Setenv("MNEMO_JWT_SECRET", "")
 
 	exitCalled := false
 	exitCode := 0
@@ -669,15 +669,15 @@ func TestCmdCloudServeMissingJWTSecret(t *testing.T) {
 	if !exitCalled || exitCode != 1 {
 		t.Fatalf("expected exit(1), got exitCalled=%v code=%d", exitCalled, exitCode)
 	}
-	if !strings.Contains(stderr, "ENGRAM_JWT_SECRET") {
+	if !strings.Contains(stderr, "MNEMO_JWT_SECRET") {
 		t.Fatalf("expected JWT_SECRET error in stderr, got: %q", stderr)
 	}
 }
 
 func TestCmdCloudServeWithFlags(t *testing.T) {
 	// Test that --database-url flag overrides env var
-	t.Setenv("ENGRAM_DATABASE_URL", "postgres://env@localhost/env")
-	t.Setenv("ENGRAM_JWT_SECRET", "this-is-a-secret-at-least-32-chars-long!!!")
+	t.Setenv("MNEMO_DATABASE_URL", "postgres://env@localhost/env")
+	t.Setenv("MNEMO_JWT_SECRET", "this-is-a-secret-at-least-32-chars-long!!!")
 
 	oldExit := exitFunc
 	t.Cleanup(func() { exitFunc = oldExit })
@@ -689,7 +689,7 @@ func TestCmdCloudServeWithFlags(t *testing.T) {
 
 	// It should NOT complain about missing DATABASE_URL — it should fail later
 	// (at cloudstore.New or auth.NewService with invalid DSN)
-	if strings.Contains(stderr, "ENGRAM_DATABASE_URL is required") {
+	if strings.Contains(stderr, "MNEMO_DATABASE_URL is required") {
 		t.Fatalf("--database-url flag should override env requirement, got: %q", stderr)
 	}
 }
@@ -709,7 +709,7 @@ func TestCmdCloudServeHappyPath(t *testing.T) {
 	})
 
 	secret := strings.Repeat("s", 32)
-	t.Setenv("ENGRAM_JWT_SECRET", secret)
+	t.Setenv("MNEMO_JWT_SECRET", secret)
 
 	var gotCfg cloud.Config
 	var gotSecret string
@@ -860,7 +860,7 @@ func TestCmdSearchRemoteFlag(t *testing.T) {
 					"type":       "decision",
 					"title":      "Use JWT auth",
 					"content":    "We decided to use JWT for authentication",
-					"project":    "engram",
+					"project":    "mnemo",
 					"scope":      "project",
 					"rank":       0.95,
 					"created_at": "2026-03-07T10:00:00Z",
@@ -892,8 +892,8 @@ func TestCmdSearchRemoteFlag(t *testing.T) {
 
 func TestCmdSearchDefaultLocalMode(t *testing.T) {
 	// Ensure no remote env vars are set
-	t.Setenv("ENGRAM_REMOTE_URL", "")
-	t.Setenv("ENGRAM_TOKEN", "")
+	t.Setenv("MNEMO_REMOTE_URL", "")
+	t.Setenv("MNEMO_TOKEN", "")
 
 	cfg := testConfig(t)
 	mustSeedObservation(t, cfg, "s-local", "proj-local", "note", "local-result", "local content for search", "project")
@@ -959,10 +959,10 @@ func TestPrintUsageIncludesCloudCommands(t *testing.T) {
 		"cloud api-key",
 		"--remote",
 		"--token",
-		"ENGRAM_REMOTE_URL",
-		"ENGRAM_TOKEN",
-		"ENGRAM_DATABASE_URL",
-		"ENGRAM_JWT_SECRET",
+		"MNEMO_REMOTE_URL",
+		"MNEMO_TOKEN",
+		"MNEMO_DATABASE_URL",
+		"MNEMO_JWT_SECRET",
 	}
 	for _, item := range cloudItems {
 		if !strings.Contains(stdout, item) {
@@ -1204,8 +1204,8 @@ func TestCmdCloudSyncFlagOverridesEnvAndConfigNoOp(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("ENGRAM_REMOTE_URL", "http://env.invalid")
-	t.Setenv("ENGRAM_TOKEN", "env-token")
+	t.Setenv("MNEMO_REMOTE_URL", "http://env.invalid")
+	t.Setenv("MNEMO_TOKEN", "env-token")
 
 	tmpHome := t.TempDir()
 	syncDataDir := filepath.Join(tmpHome, ".mnemo")
@@ -1263,8 +1263,8 @@ func TestCmdCloudStatusEnvOverridesConfig(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("ENGRAM_REMOTE_URL", srv.URL)
-	t.Setenv("ENGRAM_TOKEN", "env-token")
+	t.Setenv("MNEMO_REMOTE_URL", srv.URL)
+	t.Setenv("MNEMO_TOKEN", "env-token")
 
 	tmpHome := t.TempDir()
 	statusDataDir := filepath.Join(tmpHome, ".mnemo")

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 type stubListener struct{}
@@ -104,7 +104,7 @@ func TestAdditionalServerErrorBranches(t *testing.T) {
 	srv := New(st, 0)
 	h := srv.Handler()
 
-	createReq := httptest.NewRequest(http.MethodPost, "/sessions", strings.NewReader(`{"id":"s-test","project":"engram"}`))
+	createReq := httptest.NewRequest(http.MethodPost, "/sessions", strings.NewReader(`{"id":"s-test","project":"mnemo"}`))
 	createReq.Header.Set("Content-Type", "application/json")
 	createRec := httptest.NewRecorder()
 	h.ServeHTTP(createRec, createReq)
@@ -275,7 +275,7 @@ func TestOnWriteCalledAfterSuccessfulWrites(t *testing.T) {
 
 	// Create session → should trigger onWrite.
 	createReq := httptest.NewRequest(http.MethodPost, "/sessions",
-		strings.NewReader(`{"id":"s-test","project":"engram"}`))
+		strings.NewReader(`{"id":"s-test","project":"mnemo"}`))
 	createReq.Header.Set("Content-Type", "application/json")
 	createRec := httptest.NewRecorder()
 	h.ServeHTTP(createRec, createReq)

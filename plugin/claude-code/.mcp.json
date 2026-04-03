@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "engram": {
-      "command": "engram",
+    "mnemo": {
+      "command": "mnemo",
       "args": ["mcp", "--tools=agent"]
     }
   }

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
 )
 
 func TestReadManifestRefreshesExpiredToken(t *testing.T) {
@@ -115,7 +115,7 @@ func TestWriteChunkRefreshesExpiredToken(t *testing.T) {
 	}
 	rt.SetTokenRefresher("refresh-token", nil)
 
-	err = rt.WriteChunk("abcd1234", []byte(`{"sessions":[],"observations":[],"prompts":[]}`), engramsync.ChunkEntry{ID: "abcd1234", CreatedBy: "alice"})
+	err = rt.WriteChunk("abcd1234", []byte(`{"sessions":[],"observations":[],"prompts":[]}`), mnemosync.ChunkEntry{ID: "abcd1234", CreatedBy: "alice"})
 	if err != nil {
 		t.Fatalf("WriteChunk: %v", err)
 	}

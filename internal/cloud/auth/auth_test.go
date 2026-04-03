@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
@@ -41,7 +41,7 @@ func testStore(t *testing.T) *cloudstore.CloudStore {
 		Tag:        "16-alpine",
 		Env: []string{
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=engram_test",
+			"POSTGRES_DB=mnemo_test",
 			"POSTGRES_USER=postgres",
 		},
 	}, func(config *docker.HostConfig) {
@@ -56,7 +56,7 @@ func testStore(t *testing.T) *cloudstore.CloudStore {
 		_ = pool.Purge(resource)
 	})
 
-	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_test?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_test?sslmode=disable",
 		resource.GetPort("5432/tcp"))
 
 	if err := pool.Retry(func() error {

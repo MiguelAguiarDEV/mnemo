@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/prometheus"
+	"github.com/MiguelAguiarDEV/mnemo/internal/prometheus"
 )
 
 // ─── Job ─────────────────────────────────────────────────────────────────────

@@ -566,15 +566,15 @@ func (t *NotifyTool) Execute(ctx context.Context, params json.RawMessage) (ToolR
 // SearchMemoryTool implements Tool for searching mnemo memory.
 type SearchMemoryTool struct {
 	runner    CommandRunner
-	engramBin string
+	mnemoBin string
 }
 
 // NewSearchMemoryTool creates a SearchMemoryTool.
-func NewSearchMemoryTool(engramBin string, runner CommandRunner) *SearchMemoryTool {
+func NewSearchMemoryTool(mnemoBin string, runner CommandRunner) *SearchMemoryTool {
 	if runner == nil {
 		runner = DefaultCommandRunner()
 	}
-	return &SearchMemoryTool{runner: runner, engramBin: engramBin}
+	return &SearchMemoryTool{runner: runner, mnemoBin: mnemoBin}
 }
 
 func (t *SearchMemoryTool) Name() string        { return "search_memory" }
@@ -607,7 +607,7 @@ func (t *SearchMemoryTool) Execute(ctx context.Context, params json.RawMessage) 
 	}
 
 	slog.Info("search_memory: searching", "query", p.Query, "project", p.Project)
-	output, err := t.runner.Run(t.engramBin, args...)
+	output, err := t.runner.Run(t.mnemoBin, args...)
 	if err != nil {
 		slog.Error("search_memory: CLI failed", "err", err, "output", string(output))
 		return ToolResult{Content: "memory search failed: " + err.Error(), IsError: true}, nil
@@ -622,15 +622,15 @@ func (t *SearchMemoryTool) Execute(ctx context.Context, params json.RawMessage) 
 // SaveMemoryTool implements Tool for saving to mnemo memory.
 type SaveMemoryTool struct {
 	runner    CommandRunner
-	engramBin string
+	mnemoBin string
 }
 
 // NewSaveMemoryTool creates a SaveMemoryTool.
-func NewSaveMemoryTool(engramBin string, runner CommandRunner) *SaveMemoryTool {
+func NewSaveMemoryTool(mnemoBin string, runner CommandRunner) *SaveMemoryTool {
 	if runner == nil {
 		runner = DefaultCommandRunner()
 	}
-	return &SaveMemoryTool{runner: runner, engramBin: engramBin}
+	return &SaveMemoryTool{runner: runner, mnemoBin: mnemoBin}
 }
 
 func (t *SaveMemoryTool) Name() string        { return "save_memory" }
@@ -669,7 +669,7 @@ func (t *SaveMemoryTool) Execute(ctx context.Context, params json.RawMessage) (T
 	}
 
 	slog.Info("save_memory: saving", "title", p.Title, "type", p.Type)
-	output, err := t.runner.Run(t.engramBin, args...)
+	output, err := t.runner.Run(t.mnemoBin, args...)
 	if err != nil {
 		slog.Error("save_memory: CLI failed", "err", err, "output", string(output))
 		return ToolResult{Content: "memory save failed: " + err.Error(), IsError: true}, nil

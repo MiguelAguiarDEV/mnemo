@@ -1,4 +1,4 @@
-# Contributing to Engram
+# Contributing to Mnemo
 
 Thanks for contributing.
 

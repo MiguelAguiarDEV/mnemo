@@ -1,4 +1,4 @@
-// Package cloud provides shared configuration for the Engram Cloud subsystem.
+// Package cloud provides shared configuration for the Mnemo Cloud subsystem.
 package cloud
 
 import (
@@ -9,7 +9,7 @@ import (
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-// Config holds configuration for the Engram Cloud server and its subsystems.
+// Config holds configuration for the Mnemo Cloud server and its subsystems.
 type Config struct {
 	DSN         string   // Postgres connection string
 	JWTSecret   string   // Secret for HMAC-SHA256 JWT signing (>= 32 bytes)
@@ -22,7 +22,7 @@ type Config struct {
 // DefaultConfig returns a Config with sensible defaults for local development.
 func DefaultConfig() Config {
 	return Config{
-		DSN:         "postgres://engram:engram_dev@localhost:5433/engram_cloud?sslmode=disable",
+		DSN:         "postgres://mnemo:mnemo_dev@localhost:5433/mnemo_cloud?sslmode=disable",
 		JWTSecret:   "",
 		CORSOrigins: []string{"*"},
 		MaxPool:     10,
@@ -34,14 +34,14 @@ func DefaultConfig() Config {
 // falling back to DefaultConfig values when a variable is not set.
 //
 // Environment variables:
-//   - ENGRAM_DATABASE_URL: Postgres connection string (preferred)
-//   - ENGRAM_JWT_SECRET: JWT signing secret (preferred, required in production)
-//   - ENGRAM_CLOUD_DSN: Postgres connection string (legacy alias)
-//   - ENGRAM_CLOUD_JWT_SECRET: JWT signing secret (legacy alias)
-//   - ENGRAM_CLOUD_CORS_ORIGINS: Comma-separated list of allowed origins
-//   - ENGRAM_CLOUD_MAX_POOL: Maximum DB connection pool size
-//   - ENGRAM_PORT: HTTP port for cloud server mode
-//   - ENGRAM_CLOUD_ADMIN: Admin user email (enables Admin tab in dashboard)
+//   - MNEMO_DATABASE_URL: Postgres connection string (preferred)
+//   - MNEMO_JWT_SECRET: JWT signing secret (preferred, required in production)
+//   - MNEMO_CLOUD_DSN: Postgres connection string (legacy alias)
+//   - MNEMO_CLOUD_JWT_SECRET: JWT signing secret (legacy alias)
+//   - MNEMO_CLOUD_CORS_ORIGINS: Comma-separated list of allowed origins
+//   - MNEMO_CLOUD_MAX_POOL: Maximum DB connection pool size
+//   - MNEMO_PORT: HTTP port for cloud server mode
+//   - MNEMO_CLOUD_ADMIN: Admin user email (enables Admin tab in dashboard)
 func ConfigFromEnv() Config {
 	cfg := DefaultConfig()
 
@@ -51,7 +51,7 @@ func ConfigFromEnv() Config {
 	if v := JWTSecretFromEnv(); v != "" {
 		cfg.JWTSecret = v
 	}
-	if v := os.Getenv("ENGRAM_CLOUD_CORS_ORIGINS"); v != "" {
+	if v := os.Getenv("MNEMO_CLOUD_CORS_ORIGINS"); v != "" {
 		origins := strings.Split(v, ",")
 		trimmed := make([]string, 0, len(origins))
 		for _, o := range origins {
@@ -61,17 +61,17 @@ func ConfigFromEnv() Config {
 		}
 		cfg.CORSOrigins = trimmed
 	}
-	if v := os.Getenv("ENGRAM_CLOUD_MAX_POOL"); v != "" {
+	if v := os.Getenv("MNEMO_CLOUD_MAX_POOL"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			cfg.MaxPool = n
 		}
 	}
-	if v := os.Getenv("ENGRAM_PORT"); v != "" {
+	if v := os.Getenv("MNEMO_PORT"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			cfg.Port = n
 		}
 	}
-	if v := os.Getenv("ENGRAM_CLOUD_ADMIN"); v != "" {
+	if v := os.Getenv("MNEMO_CLOUD_ADMIN"); v != "" {
 		cfg.AdminEmail = strings.TrimSpace(v)
 	}
 
@@ -81,13 +81,13 @@ func ConfigFromEnv() Config {
 // DatabaseURLFromEnv returns the configured Postgres DSN using the canonical
 // env name first, then the legacy alias.
 func DatabaseURLFromEnv() string {
-	return firstEnv("ENGRAM_DATABASE_URL", "ENGRAM_CLOUD_DSN")
+	return firstEnv("MNEMO_DATABASE_URL", "MNEMO_CLOUD_DSN")
 }
 
 // JWTSecretFromEnv returns the configured JWT secret using the canonical env
 // name first, then the legacy alias.
 func JWTSecretFromEnv() string {
-	return firstEnv("ENGRAM_JWT_SECRET", "ENGRAM_CLOUD_JWT_SECRET")
+	return firstEnv("MNEMO_JWT_SECRET", "MNEMO_CLOUD_JWT_SECRET")
 }
 
 func firstEnv(keys ...string) string {

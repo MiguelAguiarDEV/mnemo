@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/prometheus/tools"
+	"github.com/MiguelAguiarDEV/mnemo/internal/prometheus/tools"
 )
 
 // DelegateRequest describes a task to delegate to an OpenCode worker.

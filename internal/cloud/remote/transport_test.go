@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
 )
 
 func TestNewRemoteTransportRejectsInvalidURL(t *testing.T) {
@@ -23,7 +23,7 @@ func TestNewRemoteTransportRejectsInvalidURL(t *testing.T) {
 func TestNewRemoteTransportAcceptsHTTPAndHTTPS(t *testing.T) {
 	tests := []string{
 		"http://localhost:8080",
-		"https://engram.example.com/base",
+		"https://mnemo.example.com/base",
 	}
 
 	for _, baseURL := range tests {
@@ -169,7 +169,7 @@ func TestWriteChunkSuccess(t *testing.T) {
 	}
 
 	chunkJSON := `{"sessions":[{"id":"s1","project":"proj","directory":"/tmp","started_at":"2025-01-01 00:00:00"}],"observations":[],"prompts":[]}`
-	entry := engramsync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
+	entry := mnemosync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
 
 	err = rt.WriteChunk("aabb1122", []byte(chunkJSON), entry)
 	if err != nil {
@@ -212,7 +212,7 @@ func TestWriteChunkServerError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	entry := engramsync.ChunkEntry{ID: "bad", CreatedBy: "alice"}
+	entry := mnemosync.ChunkEntry{ID: "bad", CreatedBy: "alice"}
 	err = rt.WriteChunk("bad", []byte(`{"sessions":[],"observations":[],"prompts":[]}`), entry)
 	if err == nil {
 		t.Fatal("expected error for 400 response")
@@ -227,7 +227,7 @@ func TestWriteChunkInvalidData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	entry := engramsync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
+	entry := mnemosync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
 	err = rt.WriteChunk("aabb1122", []byte("not json"), entry)
 	if err == nil {
 		t.Fatal("expected error for invalid chunk JSON")
@@ -550,7 +550,7 @@ func TestRetryPreservesPostBody(t *testing.T) {
 	rt.httpClient = &http.Client{Timeout: 5 * time.Second}
 
 	chunkJSON := `{"sessions":[],"observations":[],"prompts":[]}`
-	entry := engramsync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
+	entry := mnemosync.ChunkEntry{ID: "aabb1122", CreatedBy: "alice"}
 	err = rt.WriteChunk("aabb1122", []byte(chunkJSON), entry)
 	if err != nil {
 		t.Fatalf("WriteChunk: %v", err)
@@ -701,11 +701,11 @@ func TestConvertEmptyFields(t *testing.T) {
 // ─── Constructor Test ────────────────────────────────────────────────────────
 
 func TestNewRemoteTransport(t *testing.T) {
-	rt, err := NewRemoteTransport("https://engram.example.com/", "my-token")
+	rt, err := NewRemoteTransport("https://mnemo.example.com/", "my-token")
 	if err != nil {
 		t.Fatalf("NewRemoteTransport: %v", err)
 	}
-	if rt.baseURL != "https://engram.example.com" {
+	if rt.baseURL != "https://mnemo.example.com" {
 		t.Fatalf("baseURL should have trailing slash trimmed: got %q", rt.baseURL)
 	}
 	if rt.token != "my-token" {
@@ -746,7 +746,7 @@ func TestPushMutationsSuccess(t *testing.T) {
 	}
 
 	mutations := []MutationEntry{
-		{Entity: "session", EntityKey: "s1", Op: "upsert", Payload: json.RawMessage(`{"id":"s1","project":"engram","directory":"/work"}`)},
+		{Entity: "session", EntityKey: "s1", Op: "upsert", Payload: json.RawMessage(`{"id":"s1","project":"mnemo","directory":"/work"}`)},
 		{Entity: "observation", EntityKey: "obs-abc", Op: "upsert", Payload: json.RawMessage(`{"sync_id":"obs-abc","session_id":"s1","type":"decision","title":"test","content":"data","scope":"project"}`)},
 	}
 

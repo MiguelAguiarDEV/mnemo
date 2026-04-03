@@ -123,18 +123,18 @@ func TestInstallGeminiCLIInjectsMCPConfig(t *testing.T) {
 		t.Fatalf("expected mcpServers object")
 	}
 
-	engram, ok := mcpServers["engram"].(map[string]any)
+	mnemo, ok := mcpServers["mnemo"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected mcpServers.engram object")
+		t.Fatalf("expected mcpServers.mnemo object")
 	}
 
-	if got := engram["command"]; got != "engram" {
-		t.Fatalf("expected command engram, got %#v", got)
+	if got := mnemo["command"]; got != "mnemo" {
+		t.Fatalf("expected command mnemo, got %#v", got)
 	}
 
-	args, ok := engram["args"].([]any)
+	args, ok := mnemo["args"].([]any)
 	if !ok || len(args) != 2 || args[0] != "mcp" || args[1] != "--tools=agent" {
-		t.Fatalf("expected args [mcp --tools=agent], got %#v", engram["args"])
+		t.Fatalf("expected args [mcp --tools=agent], got %#v", mnemo["args"])
 	}
 
 	if _, ok := mcpServers["other"]; !ok {
@@ -186,7 +186,7 @@ func TestInstallCodexInjectsTOMLAndIsIdempotent(t *testing.T) {
 		"command = \"existing\"",
 		"args = [\"x\"]",
 		"",
-		"[mcp_servers.engram]",
+		"[mcp_servers.mnemo]",
 		"command = \"wrong\"",
 		"args = [\"wrong\"]",
 	}, "\n")
@@ -221,20 +221,20 @@ func TestInstallCodexInjectsTOMLAndIsIdempotent(t *testing.T) {
 		if !strings.Contains(text, "[mcp_servers.existing]") {
 			t.Fatalf("expected existing mcp server section to be preserved")
 		}
-		if strings.Count(text, "[mcp_servers.engram]") != 1 {
-			t.Fatalf("expected exactly one engram section, got:\n%s", text)
+		if strings.Count(text, "[mcp_servers.mnemo]") != 1 {
+			t.Fatalf("expected exactly one mnemo section, got:\n%s", text)
 		}
-		if !strings.Contains(text, "command = \"engram\"") {
-			t.Fatalf("expected engram command in config, got:\n%s", text)
+		if !strings.Contains(text, "command = \"mnemo\"") {
+			t.Fatalf("expected mnemo command in config, got:\n%s", text)
 		}
 		if !strings.Contains(text, `args = ["mcp", "--tools=agent"]`) {
-			t.Fatalf("expected engram args in config, got:\n%s", text)
+			t.Fatalf("expected mnemo args in config, got:\n%s", text)
 		}
-		instructionsPath := filepath.Join(home, ".codex", "engram-instructions.md")
+		instructionsPath := filepath.Join(home, ".codex", "mnemo-instructions.md")
 		if !strings.Contains(text, "model_instructions_file = \""+instructionsPath+"\"") {
 			t.Fatalf("expected model_instructions_file in config, got:\n%s", text)
 		}
-		compactPromptPath := filepath.Join(home, ".codex", "engram-compact-prompt.md")
+		compactPromptPath := filepath.Join(home, ".codex", "mnemo-compact-prompt.md")
 		if !strings.Contains(text, "experimental_compact_prompt_file = \""+compactPromptPath+"\"") {
 			t.Fatalf("expected compact prompt file key in config, got:\n%s", text)
 		}
@@ -262,7 +262,7 @@ func TestInstallCodexInjectsTOMLAndIsIdempotent(t *testing.T) {
 		t.Fatalf("expected no changes on second install")
 	}
 
-	instructionsRaw, err := os.ReadFile(filepath.Join(home, ".codex", "engram-instructions.md"))
+	instructionsRaw, err := os.ReadFile(filepath.Join(home, ".codex", "mnemo-instructions.md"))
 	if err != nil {
 		t.Fatalf("read codex instructions: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestInstallCodexInjectsTOMLAndIsIdempotent(t *testing.T) {
 		t.Fatalf("expected AFTER COMPACTION section in codex instructions")
 	}
 
-	compactRaw, err := os.ReadFile(filepath.Join(home, ".codex", "engram-compact-prompt.md"))
+	compactRaw, err := os.ReadFile(filepath.Join(home, ".codex", "mnemo-compact-prompt.md"))
 	if err != nil {
 		t.Fatalf("read codex compact prompt: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestInstallOpenCodeSuccessAndMCPRegistered(t *testing.T) {
 		t.Fatalf("expected 2 files after MCP registration, got %d", result.Files)
 	}
 
-	pluginPath := filepath.Join(xdg, "opencode", "plugins", "engram.ts")
+	pluginPath := filepath.Join(xdg, "opencode", "plugins", "mnemo.ts")
 	if _, err := os.Stat(pluginPath); err != nil {
 		t.Fatalf("expected plugin file to exist: %v", err)
 	}
@@ -319,8 +319,8 @@ func TestInstallOpenCodeSuccessAndMCPRegistered(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected mcp object in opencode.json")
 	}
-	if _, ok := mcp["engram"]; !ok {
-		t.Fatalf("expected mcp.engram registration")
+	if _, ok := mcp["mnemo"]; !ok {
+		t.Fatalf("expected mcp.mnemo registration")
 	}
 }
 
@@ -334,7 +334,7 @@ func TestInstallOpenCodeReadEmbeddedError(t *testing.T) {
 	}
 
 	_, err := installOpenCode()
-	if err == nil || !strings.Contains(err.Error(), "read embedded engram.ts") {
+	if err == nil || !strings.Contains(err.Error(), "read embedded mnemo.ts") {
 		t.Fatalf("expected read embedded error, got %v", err)
 	}
 }
@@ -410,12 +410,12 @@ func TestInjectOpenCodeMCPPreservesExistingAndIsIdempotent(t *testing.T) {
 	if _, ok := mcp["other"]; !ok {
 		t.Fatalf("expected existing mcp entry to be preserved")
 	}
-	engram, ok := mcp["engram"].(map[string]any)
+	mnemo, ok := mcp["mnemo"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected engram object")
+		t.Fatalf("expected mnemo object")
 	}
-	if engram["enabled"] != true {
-		t.Fatalf("expected engram.enabled=true")
+	if mnemo["enabled"] != true {
+		t.Fatalf("expected mnemo.enabled=true")
 	}
 }
 
@@ -480,7 +480,7 @@ func TestInjectOpenCodeMCPConfigErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("marshal engram entry error", func(t *testing.T) {
+	t.Run("marshal mnemo entry error", func(t *testing.T) {
 		resetSetupSeams(t)
 		home := useTestHome(t)
 		runtimeGOOS = "linux"
@@ -492,8 +492,8 @@ func TestInjectOpenCodeMCPConfigErrors(t *testing.T) {
 		}
 
 		err := injectOpenCodeMCP()
-		if err == nil || !strings.Contains(err.Error(), "marshal engram entry") {
-			t.Fatalf("expected marshal engram entry error, got %v", err)
+		if err == nil || !strings.Contains(err.Error(), "marshal mnemo entry") {
+			t.Fatalf("expected marshal mnemo entry error, got %v", err)
 		}
 	})
 
@@ -586,7 +586,7 @@ func TestInstallClaudeCodeBranches(t *testing.T) {
 				}
 				return []byte("already added"), errors.New("exit 1")
 			}
-			if strings.Join(args, " ") != "plugin install engram" {
+			if strings.Join(args, " ") != "plugin install mnemo" {
 				t.Fatalf("unexpected second command args: %q", strings.Join(args, " "))
 			}
 			return []byte("installed"), nil
@@ -712,10 +712,10 @@ func TestPathHelpersAcrossOSVariants(t *testing.T) {
 	if got := geminiEnvPath(); got != filepath.Join(filepath.Dir(geminiConfigPath()), ".env") {
 		t.Fatalf("unexpected gemini env path: %s", got)
 	}
-	if got := codexInstructionsPath(); got != filepath.Join(filepath.Dir(codexConfigPath()), "engram-instructions.md") {
+	if got := codexInstructionsPath(); got != filepath.Join(filepath.Dir(codexConfigPath()), "mnemo-instructions.md") {
 		t.Fatalf("unexpected codex instructions path: %s", got)
 	}
-	if got := codexCompactPromptPath(); got != filepath.Join(filepath.Dir(codexConfigPath()), "engram-compact-prompt.md") {
+	if got := codexCompactPromptPath(); got != filepath.Join(filepath.Dir(codexConfigPath()), "mnemo-compact-prompt.md") {
 		t.Fatalf("unexpected codex compact prompt path: %s", got)
 	}
 }
@@ -803,12 +803,12 @@ func TestGeminiAndCodexHelpersErrorPaths(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected mcpServers object")
 		}
-		engram, ok := mcpServers["engram"].(map[string]any)
+		mnemo, ok := mcpServers["mnemo"].(map[string]any)
 		if !ok {
-			t.Fatalf("expected engram server object")
+			t.Fatalf("expected mnemo server object")
 		}
-		if engram["command"] != "engram" {
-			t.Fatalf("expected engram command, got %#v", engram["command"])
+		if mnemo["command"] != "mnemo" {
+			t.Fatalf("expected mnemo command, got %#v", mnemo["command"])
 		}
 	})
 
@@ -820,8 +820,8 @@ func TestGeminiAndCodexHelpersErrorPaths(t *testing.T) {
 		}
 
 		err := injectGeminiMCP(configPath)
-		if err == nil || !strings.Contains(err.Error(), "marshal engram entry") {
-			t.Fatalf("expected marshal engram entry error, got %v", err)
+		if err == nil || !strings.Contains(err.Error(), "marshal mnemo entry") {
+			t.Fatalf("expected marshal mnemo entry error, got %v", err)
 		}
 	})
 
@@ -1033,9 +1033,9 @@ func TestGeminiAndCodexHelpersErrorPaths(t *testing.T) {
 		}
 	})
 
-	t.Run("upsertCodexEngramBlock replaces section before another section", func(t *testing.T) {
+	t.Run("upsertCodexMnemoBlock replaces section before another section", func(t *testing.T) {
 		input := strings.Join([]string{
-			"[mcp_servers.engram]",
+			"[mcp_servers.mnemo]",
 			"command = \"wrong\"",
 			"args = [\"wrong\"]",
 			"",
@@ -1043,18 +1043,18 @@ func TestGeminiAndCodexHelpersErrorPaths(t *testing.T) {
 			"command = \"other\"",
 		}, "\n")
 
-		output := upsertCodexEngramBlock(input)
-		if strings.Count(output, "[mcp_servers.engram]") != 1 {
-			t.Fatalf("expected one engram block, got:\n%s", output)
+		output := upsertCodexMnemoBlock(input)
+		if strings.Count(output, "[mcp_servers.mnemo]") != 1 {
+			t.Fatalf("expected one mnemo block, got:\n%s", output)
 		}
 		if !strings.Contains(output, "[mcp_servers.other]") {
 			t.Fatalf("expected other section preserved, got:\n%s", output)
 		}
 	})
 
-	t.Run("upsertCodexEngramBlock from empty content", func(t *testing.T) {
-		output := upsertCodexEngramBlock("\n\n")
-		if output != codexEngramBlock+"\n" {
+	t.Run("upsertCodexMnemoBlock from empty content", func(t *testing.T) {
+		output := upsertCodexMnemoBlock("\n\n")
+		if output != codexMnemoBlock+"\n" {
 			t.Fatalf("unexpected output for empty content:\n%s", output)
 		}
 	})
@@ -1152,7 +1152,7 @@ func TestAdditionalHelperBranches(t *testing.T) {
 		home := useTestHome(t)
 		runtimeGOOS = "linux"
 
-		instructionsPath := filepath.Join(home, ".codex", "engram-instructions.md")
+		instructionsPath := filepath.Join(home, ".codex", "mnemo-instructions.md")
 		if err := os.MkdirAll(instructionsPath, 0755); err != nil {
 			t.Fatalf("create instructions path as dir: %v", err)
 		}
@@ -1168,7 +1168,7 @@ func TestAdditionalHelperBranches(t *testing.T) {
 		home := useTestHome(t)
 		runtimeGOOS = "linux"
 
-		compactPath := filepath.Join(home, ".codex", "engram-compact-prompt.md")
+		compactPath := filepath.Join(home, ".codex", "mnemo-compact-prompt.md")
 		if err := os.MkdirAll(compactPath, 0755); err != nil {
 			t.Fatalf("create compact path as dir: %v", err)
 		}
@@ -1687,7 +1687,7 @@ func TestInjectOpenCodeMCPHandlesJSONC(t *testing.T) {
 		t.Fatalf("injectOpenCodeMCP with JSONC failed: %v", err)
 	}
 
-	// Verify engram was added to the .jsonc file
+	// Verify mnemo was added to the .jsonc file
 	raw, err := os.ReadFile(jsoncPath)
 	if err != nil {
 		t.Fatalf("read result: %v", err)
@@ -1700,8 +1700,8 @@ func TestInjectOpenCodeMCPHandlesJSONC(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected mcp object in result")
 	}
-	if _, ok := mcp["engram"]; !ok {
-		t.Fatalf("expected engram to be registered")
+	if _, ok := mcp["mnemo"]; !ok {
+		t.Fatalf("expected mnemo to be registered")
 	}
 	if _, ok := mcp["other"]; !ok {
 		t.Fatalf("expected existing 'other' entry to be preserved")

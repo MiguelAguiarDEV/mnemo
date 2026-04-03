@@ -1,4 +1,4 @@
-// Package cloudstore implements the Postgres-backed storage layer for Engram Cloud.
+// Package cloudstore implements the Postgres-backed storage layer for Mnemo Cloud.
 //
 // It mirrors the local SQLite store but uses Postgres with row-level user
 // isolation, full-text search via tsvector, and chunk-based sync storage.
@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -126,7 +126,7 @@ type CloudStats struct {
 
 // ─── CloudStore ─────────────────────────────────────────────────────────────
 
-// CloudStore provides Postgres-backed storage for Engram Cloud.
+// CloudStore provides Postgres-backed storage for Mnemo Cloud.
 type CloudStore struct {
 	db *sql.DB
 }

@@ -1,11 +1,11 @@
 ---
-name: engram-memory
-description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to engram proactively. Do NOT wait for the user to ask."
+name: mnemo-memory
+description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to mnemo proactively. Do NOT wait for the user to ask."
 ---
 
-# Engram Persistent Memory — Protocol
+# Mnemo Persistent Memory — Protocol
 
-You have access to Engram, a persistent memory system that survives across sessions and compactions.
+You have access to Mnemo, a persistent memory system that survives across sessions and compactions.
 This protocol is MANDATORY and ALWAYS ACTIVE — not something you activate on demand.
 
 ## PROACTIVE SAVE TRIGGERS (mandatory — do NOT wait for user to ask)

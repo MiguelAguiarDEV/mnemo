@@ -1,7 +1,7 @@
-// Package remote implements the cloud-backed sync transport for Engram.
+// Package remote implements the cloud-backed sync transport for Mnemo.
 //
 // It provides a Transport implementation that communicates with the
-// Engram Cloud server for push/pull sync operations over HTTP.
+// Mnemo Cloud server for push/pull sync operations over HTTP.
 package remote
 
 import (
@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	engramsync "github.com/Gentleman-Programming/engram/internal/sync"
+	mnemosync "github.com/MiguelAguiarDEV/mnemo/internal/sync"
 )
 
 // ─── RemoteTransport ─────────────────────────────────────────────────────────
 
-// RemoteTransport pushes/pulls chunks over HTTP to an Engram cloud server.
+// RemoteTransport pushes/pulls chunks over HTTP to a Mnemo cloud server.
 // It implements sync.Transport.
 type RemoteTransport struct {
 	baseURL    string       // e.g. "https://mnemo.example.com"
@@ -82,7 +82,7 @@ func validateBaseURL(raw string) (string, error) {
 
 // ReadManifest fetches the chunk manifest from the cloud server.
 // GET /sync/pull returns {"version": 1, "chunks": [...]}.
-func (rt *RemoteTransport) ReadManifest() (*engramsync.Manifest, error) {
+func (rt *RemoteTransport) ReadManifest() (*mnemosync.Manifest, error) {
 	req, err := http.NewRequest("GET", rt.baseURL+"/sync/pull", nil)
 	if err != nil {
 		return nil, fmt.Errorf("cloud: build manifest request: %w", err)
@@ -104,7 +104,7 @@ func (rt *RemoteTransport) ReadManifest() (*engramsync.Manifest, error) {
 		return nil, fmt.Errorf("cloud: read manifest body: %w", err)
 	}
 
-	var m engramsync.Manifest
+	var m mnemosync.Manifest
 	if err := json.Unmarshal(body, &m); err != nil {
 		return nil, fmt.Errorf("cloud: parse manifest: %w", err)
 	}
@@ -112,14 +112,14 @@ func (rt *RemoteTransport) ReadManifest() (*engramsync.Manifest, error) {
 }
 
 // WriteManifest is a no-op for remote: the cloud server manages its own manifest.
-func (rt *RemoteTransport) WriteManifest(_ *engramsync.Manifest) error {
+func (rt *RemoteTransport) WriteManifest(_ *mnemosync.Manifest) error {
 	return nil
 }
 
 // WriteChunk pushes a chunk to the cloud server via POST /sync/push.
 // The data parameter is raw ChunkData JSON; this method wraps it in the
 // push request format the server expects.
-func (rt *RemoteTransport) WriteChunk(chunkID string, data []byte, entry engramsync.ChunkEntry) error {
+func (rt *RemoteTransport) WriteChunk(chunkID string, data []byte, entry mnemosync.ChunkEntry) error {
 	// Parse ChunkData from the raw bytes to build the push request.
 	var chunk chunkData
 	if err := json.Unmarshal(data, &chunk); err != nil {

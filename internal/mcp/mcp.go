@@ -1,16 +1,16 @@
-// Package mcp implements the Model Context Protocol server for Engram.
+// Package mcp implements the Model Context Protocol server for Mnemo.
 //
 // This exposes memory tools via MCP stdio transport so ANY agent
-// (OpenCode, Claude Code, Cursor, Windsurf, etc.) can use Engram's
+// (OpenCode, Claude Code, Cursor, Windsurf, etc.) can use Mnemo's
 // persistent memory just by adding it as an MCP server.
 //
 // Tool profiles allow agents to load only the tools they need:
 //
-//	engram mcp                    → all 14 tools (default)
-//	engram mcp --tools=agent      → 11 tools agents actually use (per skill files)
-//	engram mcp --tools=admin      → 3 tools for TUI/CLI (delete, stats, timeline)
-//	engram mcp --tools=agent,admin → combine profiles
-//	engram mcp --tools=mem_save,mem_search → individual tool names
+//	mnemo mcp                    → all 14 tools (default)
+//	mnemo mcp --tools=agent      → 11 tools agents actually use (per skill files)
+//	mnemo mcp --tools=admin      → 3 tools for TUI/CLI (delete, stats, timeline)
+//	mnemo mcp --tools=agent,admin → combine profiles
+//	mnemo mcp --tools=mem_save,mem_search → individual tool names
 package mcp
 
 import (
@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -61,9 +61,9 @@ var ProfileAgent = map[string]bool{
 // ProfileAdmin contains tools for TUI, dashboards, and manual curation
 // that are NOT referenced in any agent skill or memory protocol.
 var ProfileAdmin = map[string]bool{
-	"mem_delete":   true, // only in OpenCode's ENGRAM_TOOLS filter, not in any agent instructions
-	"mem_stats":    true, // only in OpenCode's ENGRAM_TOOLS filter, not in any agent instructions
-	"mem_timeline": true, // only in OpenCode's ENGRAM_TOOLS filter, not in any agent instructions
+	"mem_delete":   true, // only in OpenCode's MNEMO_TOOLS filter, not in any agent instructions
+	"mem_stats":    true, // only in OpenCode's MNEMO_TOOLS filter, not in any agent instructions
+	"mem_timeline": true, // only in OpenCode's MNEMO_TOOLS filter, not in any agent instructions
 }
 
 // Profiles maps profile names to their tool sets.
@@ -112,9 +112,9 @@ func NewServer(s *store.Store) *server.MCPServer {
 }
 
 // serverInstructions tells MCP clients (especially Claude Code's Tool Search)
-// when to search for Engram's tools. This string is returned in the
+// when to search for Mnemo.s tools. This string is returned in the
 // initialize response and may be added to the system prompt by clients.
-const serverInstructions = `Engram provides persistent memory that survives across sessions and context ` +
+const serverInstructions = `Mnemo provides persistent memory that survives across sessions and context ` +
 	`compactions. Search these tools when you need to: save decisions, bugs, ` +
 	`architecture choices, or discoveries to memory; recall or search past work ` +
 	`from previous sessions; manage coding session lifecycle (start, end, ` +
@@ -126,7 +126,7 @@ const serverInstructions = `Engram provides persistent memory that survives acro
 // the allowlist. If allowlist is nil, all tools are registered.
 func NewServerWithTools(s *store.Store, allowlist map[string]bool) *server.MCPServer {
 	srv := server.NewMCPServer(
-		"engram",
+		"mnemo",
 		"0.1.0",
 		server.WithToolCapabilities(true),
 		server.WithInstructions(serverInstructions),

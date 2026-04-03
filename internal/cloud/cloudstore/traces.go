@@ -21,7 +21,7 @@ type ToolCall struct {
 	TokensOut  *int    `json:"tokens_out,omitempty"`
 	Model      *string `json:"model,omitempty"`
 	CostUSD    *string `json:"cost_usd,omitempty"`
-	IsEngram   bool    `json:"is_engram"`
+	IsMnemo    bool    `json:"is_engram"` // DB column is_engram (legacy, migration deferred)
 	OccurredAt string  `json:"occurred_at"`
 }
 
@@ -38,7 +38,7 @@ type AddToolCallParams struct {
 	TokensOut  *int            `json:"tokens_out,omitempty"`
 	Model      string          `json:"model,omitempty"`
 	CostUSD    *float64        `json:"cost_usd,omitempty"`
-	IsEngram   bool            `json:"is_engram"`
+	IsMnemo    bool            `json:"is_engram"` // DB column is_engram (legacy, migration deferred)
 }
 
 // AddToolCallResult is returned after inserting a tool call trace.
@@ -63,7 +63,7 @@ func (cs *CloudStore) AddToolCall(userID string, p AddToolCallParams) (*AddToolC
 		 RETURNING id, occurred_at`,
 		userID, p.SessionID, nullableString(p.Project), p.Agent, p.ToolName,
 		inputJSON, nullableString(p.OutputText), p.DurationMs, p.TokensIn,
-		p.TokensOut, nullableString(p.Model), p.CostUSD, p.IsEngram,
+		p.TokensOut, nullableString(p.Model), p.CostUSD, p.IsMnemo,
 	).Scan(&r.ID, &r.OccurredAt)
 	if err != nil {
 		return nil, fmt.Errorf("cloudstore: add tool call: %w", err)
@@ -101,7 +101,7 @@ func (cs *CloudStore) RecentToolCalls(userID string, limit int) ([]ToolCall, int
 		var tc ToolCall
 		if err := rows.Scan(&tc.ID, &tc.UserID, &tc.SessionID, &tc.Project, &tc.Agent,
 			&tc.ToolName, &tc.InputJSON, &tc.OutputText, &tc.DurationMs, &tc.TokensIn,
-			&tc.TokensOut, &tc.Model, &tc.CostUSD, &tc.IsEngram, &tc.OccurredAt); err != nil {
+			&tc.TokensOut, &tc.Model, &tc.CostUSD, &tc.IsMnemo, &tc.OccurredAt); err != nil {
 			return nil, 0, fmt.Errorf("cloudstore: scan tool call: %w", err)
 		}
 		calls = append(calls, tc)
@@ -147,7 +147,7 @@ func (cs *CloudStore) SessionToolCalls(userID, sessionID string, limit, offset i
 		var tc ToolCall
 		if err := rows.Scan(&tc.ID, &tc.UserID, &tc.SessionID, &tc.Project, &tc.Agent,
 			&tc.ToolName, &tc.InputJSON, &tc.OutputText, &tc.DurationMs, &tc.TokensIn,
-			&tc.TokensOut, &tc.Model, &tc.CostUSD, &tc.IsEngram, &tc.OccurredAt); err != nil {
+			&tc.TokensOut, &tc.Model, &tc.CostUSD, &tc.IsMnemo, &tc.OccurredAt); err != nil {
 			return nil, fmt.Errorf("cloudstore: scan tool call: %w", err)
 		}
 		calls = append(calls, tc)

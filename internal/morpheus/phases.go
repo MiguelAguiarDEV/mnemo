@@ -11,7 +11,7 @@ import (
 
 // ─── Observation ──────────────────────────────────────────────────────────
 
-// Observation represents a single engram observation returned by search.
+// Observation represents a single mnemo observation returned by search.
 type Observation struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
@@ -80,7 +80,7 @@ func (c *Consolidator) orient(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// countNewObservations runs engram search to count observations since
+// countNewObservations runs mnemo search to count observations since
 // the last consolidation.
 func (c *Consolidator) countNewObservations(ctx context.Context) (int, error) {
 	args := []string{"search", "--all", "--limit", "100", "--format", "json"}
@@ -88,10 +88,10 @@ func (c *Consolidator) countNewObservations(ctx context.Context) (int, error) {
 		args = append(args, "--project", c.project)
 	}
 
-	output, err := c.runner.Run(c.engramBin, args...)
+	output, err := c.runner.Run(c.mnemoBin, args...)
 	if err != nil {
-		// If engram CLI fails, assume we need consolidation to surface the error.
-		c.logger.Warn("orient: engram search failed, assuming consolidation needed",
+		// If mnemo CLI fails, assume we need consolidation to surface the error.
+		c.logger.Warn("orient: mnemo search failed, assuming consolidation needed",
 			"err", err, "output", string(output))
 		return c.minObs, nil
 	}
@@ -131,9 +131,9 @@ func (c *Consolidator) gather(ctx context.Context) ([]TopicCluster, error) {
 		args = append(args, "--project", c.project)
 	}
 
-	output, err := c.runner.Run(c.engramBin, args...)
+	output, err := c.runner.Run(c.mnemoBin, args...)
 	if err != nil {
-		return nil, fmt.Errorf("gather: engram search: %w (output: %s)", err, string(output))
+		return nil, fmt.Errorf("gather: mnemo search: %w (output: %s)", err, string(output))
 	}
 
 	var obs []Observation
@@ -272,7 +272,7 @@ func (c *Consolidator) mergeCluster(cluster TopicCluster) MergeResult {
 
 // ─── Phase 4: Prune ───────────────────────────────────────────────────────
 
-// prune writes consolidated observations back to engram and marks source
+// prune writes consolidated observations back to mnemo and marks source
 // observations as consolidated. Returns an audit log of actions taken.
 func (c *Consolidator) prune(ctx context.Context, results []MergeResult) ([]string, error) {
 	var auditLog []string
@@ -301,7 +301,7 @@ func (c *Consolidator) prune(ctx context.Context, results []MergeResult) ([]stri
 			args = append(args, "--topic-key", r.TopicKey)
 		}
 
-		output, err := c.runner.Run(c.engramBin, args...)
+		output, err := c.runner.Run(c.mnemoBin, args...)
 		if err != nil {
 			c.logger.Error("prune: failed to save consolidated observation",
 				"topic_key", r.TopicKey,

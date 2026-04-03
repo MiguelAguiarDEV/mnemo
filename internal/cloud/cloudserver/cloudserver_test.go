@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
-	"github.com/Gentleman-Programming/engram/internal/cloud/auth"
-	"github.com/Gentleman-Programming/engram/internal/cloud/cloudstore"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -47,7 +47,7 @@ func testDSN(t *testing.T) string {
 		Tag:        "16-alpine",
 		Env: []string{
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=engram_test",
+			"POSTGRES_DB=mnemo_test",
 			"POSTGRES_USER=postgres",
 		},
 	}, func(config *docker.HostConfig) {
@@ -62,7 +62,7 @@ func testDSN(t *testing.T) string {
 		_ = pool.Purge(resource)
 	})
 
-	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_test?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_test?sslmode=disable",
 		resource.GetPort("5432/tcp"))
 
 	if err := pool.Retry(func() error {
@@ -216,8 +216,8 @@ func TestHealthNoAuth(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("health: expected status=ok, got %v", body["status"])
 	}
-	if body["service"] != "engram-cloud" {
-		t.Fatalf("health: expected service=engram-cloud, got %v", body["service"])
+	if body["service": "mnemo-cloud" {
+		t.Fatalf("health: expected service": "mnemo-cloud, got %v", body["service"])
 	}
 }
 
@@ -630,16 +630,16 @@ func TestPushValidChunk(t *testing.T) {
 		CreatedBy: "pushuser",
 		Data: pushData{
 			Sessions: []pushSession{
-				{ID: "sess-1", Project: "engram", Directory: "/work"},
+				{ID: "sess-1", Project: "mnemo", Directory: "/work"},
 				{ID: "sess-2", Project: "other", Directory: "/other"},
 			},
 			Observations: []pushObservation{
-				{SessionID: "sess-1", Type: "decision", Title: "Use JWT", Content: "We chose JWT for auth", Project: "engram"},
-				{SessionID: "sess-1", Type: "note", Title: "Setup", Content: "Project setup complete", Project: "engram"},
+				{SessionID: "sess-1", Type: "decision", Title: "Use JWT", Content: "We chose JWT for auth", Project: "mnemo"},
+				{SessionID: "sess-1", Type: "note", Title: "Setup", Content: "Project setup complete", Project: "mnemo"},
 				{SessionID: "sess-2", Type: "observation", Title: "Testing", Content: "Tests pass", Project: "other"},
 			},
 			Prompts: []pushPrompt{
-				{SessionID: "sess-1", Content: "How to implement auth?", Project: "engram"},
+				{SessionID: "sess-1", Content: "How to implement auth?", Project: "mnemo"},
 			},
 		},
 	}
@@ -927,10 +927,10 @@ func TestSearchReturnsResults(t *testing.T) {
 		ChunkID:   "eeee5555",
 		CreatedBy: "searchuser",
 		Data: pushData{
-			Sessions: []pushSession{{ID: "s-search", Project: "engram", Directory: "/work"}},
+			Sessions: []pushSession{{ID: "s-search", Project: "mnemo", Directory: "/work"}},
 			Observations: []pushObservation{
-				{SessionID: "s-search", Type: "decision", Title: "Authentication Design", Content: "We chose JWT authentication for the cloud sync feature", Project: "engram"},
-				{SessionID: "s-search", Type: "note", Title: "Database Setup", Content: "PostgreSQL configured with tsvector for full text search", Project: "engram"},
+				{SessionID: "s-search", Type: "decision", Title: "Authentication Design", Content: "We chose JWT authentication for the cloud sync feature", Project: "mnemo"},
+				{SessionID: "s-search", Type: "note", Title: "Database Setup", Content: "PostgreSQL configured with tsvector for full text search", Project: "mnemo"},
 			},
 		},
 	}
@@ -1013,12 +1013,12 @@ func TestContextReturnsFormattedString(t *testing.T) {
 		ChunkID:   "ffff6666",
 		CreatedBy: "ctxuser",
 		Data: pushData{
-			Sessions: []pushSession{{ID: "s-ctx", Project: "engram", Directory: "/work"}},
+			Sessions: []pushSession{{ID: "s-ctx", Project: "mnemo", Directory: "/work"}},
 			Observations: []pushObservation{
-				{SessionID: "s-ctx", Type: "decision", Title: "Context Test", Content: "Testing the context endpoint", Project: "engram"},
+				{SessionID: "s-ctx", Type: "decision", Title: "Context Test", Content: "Testing the context endpoint", Project: "mnemo"},
 			},
 			Prompts: []pushPrompt{
-				{SessionID: "s-ctx", Content: "How does context work?", Project: "engram"},
+				{SessionID: "s-ctx", Content: "How does context work?", Project: "mnemo"},
 			},
 		},
 	}
@@ -1031,7 +1031,7 @@ func TestContextReturnsFormattedString(t *testing.T) {
 	}
 
 	// Get context
-	ctxReq := authReq(http.MethodGet, "/sync/context?project=engram", "", result.AccessToken)
+	ctxReq := authReq(http.MethodGet, "/sync/context?project=mnemo", "", result.AccessToken)
 	ctxRec := httptest.NewRecorder()
 	h.ServeHTTP(ctxRec, ctxReq)
 
@@ -1071,7 +1071,7 @@ func TestDataEndpointsReturn503WhenStoreUnavailable(t *testing.T) {
 		{name: "context", method: http.MethodGet, target: "/sync/context"},
 		{name: "pull manifest", method: http.MethodGet, target: "/sync/pull"},
 		{name: "pull chunk", method: http.MethodGet, target: "/sync/pull/deadbeef"},
-		{name: "push", method: http.MethodPost, target: "/sync/push", body: `{"chunk_id":"deadbeef","created_by":"closeddb","data":{"sessions":[{"id":"sess-1","project":"engram","directory":"/tmp"}],"observations":[],"prompts":[]}}`},
+		{name: "push", method: http.MethodPost, target: "/sync/push", body: `{"chunk_id":"deadbeef","created_by":"closeddb","data":{"sessions":[{"id":"sess-1","project":"mnemo","directory":"/tmp"}],"observations":[],"prompts":[]}}`},
 	}
 
 	for _, tc := range requests {
@@ -1284,9 +1284,9 @@ func TestMutationPushAcceptsBatch(t *testing.T) {
 
 	body := `{
 		"mutations": [
-			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"engram","directory":"/work"}},
+			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"mnemo","directory":"/work"}},
 			{"entity":"observation","entity_key":"obs-abc","op":"upsert","payload":{"sync_id":"obs-abc","session_id":"s1","type":"decision","title":"JWT auth","content":"Chose JWT","scope":"project"}},
-			{"entity":"prompt","entity_key":"prompt-xyz","op":"upsert","payload":{"sync_id":"prompt-xyz","session_id":"s1","content":"How to auth?","project":"engram"}}
+			{"entity":"prompt","entity_key":"prompt-xyz","op":"upsert","payload":{"sync_id":"prompt-xyz","session_id":"s1","content":"How to auth?","project":"mnemo"}}
 		]
 	}`
 	req := authReq(http.MethodPost, "/sync/mutations/push", body, result.AccessToken)
@@ -1347,13 +1347,13 @@ func TestMutationPushReturnsConflictWhenProjectPaused(t *testing.T) {
 	h := srv.Handler()
 
 	result := registerUser(t, h, "mutpaused", "mutpaused@test.com", "password123")
-	if err := srv.store.SetProjectSyncEnabled("engram", false, result.UserID, "Security hold"); err != nil {
+	if err := srv.store.SetProjectSyncEnabled("mnemo", false, result.UserID, "Security hold"); err != nil {
 		t.Fatalf("SetProjectSyncEnabled: %v", err)
 	}
 
 	body := `{
 		"mutations": [
-			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"engram","directory":"/work"}}
+			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"mnemo","directory":"/work"}}
 		]
 	}`
 	req := authReq(http.MethodPost, "/sync/mutations/push", body, result.AccessToken)
@@ -1387,7 +1387,7 @@ func TestMutationPushIdempotentRetry(t *testing.T) {
 
 	body := `{
 		"mutations": [
-			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"engram","directory":"/work"}}
+			{"entity":"session","entity_key":"s1","op":"upsert","payload":{"id":"s1","project":"mnemo","directory":"/work"}}
 		]
 	}`
 

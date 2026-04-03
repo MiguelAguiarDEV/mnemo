@@ -1,4 +1,4 @@
-// Package server provides the HTTP API for Engram.
+// Package server provides the HTTP API for Mnemo.
 //
 // This is how external clients (OpenCode plugin, Claude Code hooks,
 // any agent) communicate with the memory engine. Simple JSON REST API.
@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 )
 
 var loadServerStats = func(s *store.Store) (*store.Stats, error) {
@@ -22,7 +22,7 @@ var loadServerStats = func(s *store.Store) (*store.Stats, error) {
 }
 
 // SyncStatusProvider returns the current sync status. This is implemented
-// by autosync.Manager and injected from cmd/engram/main.go.
+// by autosync.Manager and injected from cmd/mnemo/main.go.
 type SyncStatusProvider interface {
 	Status() SyncStatus
 }
@@ -84,9 +84,9 @@ func (s *Server) Start() error {
 
 	ln, err := listenFn("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("engram server: listen %s: %w", addr, err)
+		return fmt.Errorf("mnemo server: listen %s: %w", addr, err)
 	}
-	log.Printf("[engram] HTTP server listening on %s", addr)
+	log.Printf("[mnemo] HTTP server listening on %s", addr)
 	return serveFn(ln, s.mux)
 }
 
@@ -140,7 +140,7 @@ func (s *Server) routes() {
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]any{
 		"status":  "ok",
-		"service": "engram",
+		"service": "mnemo",
 		"version": "0.1.0",
 	})
 }
@@ -435,7 +435,7 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", "attachment; filename=engram-export.json")
+	w.Header().Set("Content-Disposition", "attachment; filename=mnemo-export.json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
 }

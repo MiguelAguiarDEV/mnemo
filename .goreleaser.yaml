@@ -1,14 +1,14 @@
 version: 2
 
-project_name: engram
+project_name: mnemo
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - main: ./cmd/engram
-    binary: engram
+  - main: ./cmd/mnemo
+    binary: mnemo
     env:
       - CGO_ENABLED=0
     goos:
@@ -43,12 +43,12 @@ changelog:
 
 brews:
   - repository:
-      owner: Gentleman-Programming
+      owner: MiguelAguiarDEV
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    name: engram
-    homepage: "https://github.com/Gentleman-Programming/engram"
+    name: mnemo
+    homepage: "https://github.com/MiguelAguiarDEV/engram"
     description: "Persistent memory for AI coding agents. Agent-agnostic, single binary, zero dependencies."
     license: "MIT"
-    commit_msg_template: "chore: update engram formula to {{ .Tag }}"
+    commit_msg_template: "chore: update mnemo formula to {{ .Tag }}"

@@ -38,7 +38,7 @@ func (s *CloudServer) handleEvents(w http.ResponseWriter, r *http.Request) {
 	// Create a pq listener for NOTIFY channels.
 	reportProblem := func(ev pq.ListenerEventType, err error) {
 		if err != nil {
-			log.Printf("[engram-cloud] SSE listener error: %v", err)
+			log.Printf("[mnemo-cloud] SSE listener error: %v", err)
 		}
 	}
 
@@ -46,11 +46,11 @@ func (s *CloudServer) handleEvents(w http.ResponseWriter, r *http.Request) {
 	defer listener.Close()
 
 	if err := listener.Listen("jarvis_tasks"); err != nil {
-		log.Printf("[engram-cloud] SSE: failed to LISTEN jarvis_tasks: %v", err)
+		log.Printf("[mnemo-cloud] SSE: failed to LISTEN jarvis_tasks: %v", err)
 		return
 	}
 	if err := listener.Listen("jarvis_activity"); err != nil {
-		log.Printf("[engram-cloud] SSE: failed to LISTEN jarvis_activity: %v", err)
+		log.Printf("[mnemo-cloud] SSE: failed to LISTEN jarvis_activity: %v", err)
 		return
 	}
 

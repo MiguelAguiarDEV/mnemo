@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/store"
+	"github.com/MiguelAguiarDEV/mnemo/internal/store"
 	mcppkg "github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -90,7 +90,7 @@ func TestHandleSaveSuggestsTopicKeyWhenMissing(t *testing.T) {
 		"title":   "Auth architecture",
 		"content": "Define boundaries for auth middleware",
 		"type":    "architecture",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 
 	res, err := h(context.Background(), req)
@@ -115,7 +115,7 @@ func TestHandleSaveDoesNotSuggestWhenTopicKeyProvided(t *testing.T) {
 		"title":     "Auth architecture",
 		"content":   "Define boundaries for auth middleware",
 		"type":      "architecture",
-		"project":   "engram",
+		"project":   "mnemo",
 		"topic_key": "architecture/auth-model",
 	}}}
 
@@ -139,7 +139,7 @@ func TestHandleCapturePassiveExtractsAndSaves(t *testing.T) {
 
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"content": "## Key Learnings:\n\n1. bcrypt cost=12 is the right balance for our server\n2. JWT refresh tokens need atomic rotation to prevent races\n",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 
 	res, err := h(context.Background(), req)
@@ -164,7 +164,7 @@ func TestHandleCapturePassiveRequiresContent(t *testing.T) {
 	h := handleCapturePassive(s)
 
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 
 	res, err := h(context.Background(), req)
@@ -182,7 +182,7 @@ func TestHandleCapturePassiveWithNoLearningSection(t *testing.T) {
 
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"content": "plain text without learning headers",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 
 	res, err := h(context.Background(), req)
@@ -205,7 +205,7 @@ func TestHandleCapturePassiveDefaultsSourceAndSession(t *testing.T) {
 
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"content": "## Key Learnings:\n\n1. This learning is long enough to be persisted with default source",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 
 	res, err := h(context.Background(), req)
@@ -216,7 +216,7 @@ func TestHandleCapturePassiveDefaultsSourceAndSession(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", callResultText(t, res))
 	}
 
-	obs, err := s.RecentObservations("engram", "project", 5)
+	obs, err := s.RecentObservations("mnemo", "project", 5)
 	if err != nil {
 		t.Fatalf("recent observations: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestHandleCapturePassiveReturnsToolErrorOnStoreFailure(t *testing.T) {
 	// Force FK failure: explicit session_id that does not exist.
 	req := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"session_id": "missing-session",
-		"project":    "engram",
+		"project":    "mnemo",
 		"content":    "## Key Learnings:\n\n1. This learning is long enough to trigger insert and fail on FK",
 	}}}
 
@@ -287,7 +287,7 @@ func TestHelperArgsAndTruncate(t *testing.T) {
 
 func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-mcp", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-mcp", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 
@@ -296,7 +296,7 @@ func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 		Type:      "bugfix",
 		Title:     "Fix panic",
 		Content:   "Fix panic in parser branch when args are missing",
-		Project:   "engram",
+		Project:   "mnemo",
 		Scope:     "project",
 	})
 	if err != nil {
@@ -306,7 +306,7 @@ func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 	search := handleSearch(s)
 	searchReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"query":   "panic",
-		"project": "engram",
+		"project": "mnemo",
 		"scope":   "project",
 		"limit":   5.0,
 	}}}
@@ -365,7 +365,7 @@ func TestHandleSearchAndCRUDHandlers(t *testing.T) {
 
 func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-flow", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-flow", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 
@@ -374,7 +374,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 		Type:      "decision",
 		Title:     "Auth decision",
 		Content:   "Keep auth in middleware",
-		Project:   "engram",
+		Project:   "mnemo",
 	})
 	if err != nil {
 		t.Fatalf("add observation: %v", err)
@@ -383,7 +383,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 	savePrompt := handleSavePrompt(s)
 	savePromptReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"content": "how do we fix auth race conditions?",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 	savePromptRes, err := savePrompt(context.Background(), savePromptReq)
 	if err != nil {
@@ -395,7 +395,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 
 	contextHandler := handleContext(s)
 	contextReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
-		"project": "engram",
+		"project": "mnemo",
 		"scope":   "project",
 	}}}
 	contextRes, err := contextHandler(context.Background(), contextReq)
@@ -418,7 +418,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 		t.Fatalf("unexpected stats error: %s", callResultText(t, statsRes))
 	}
 
-	recent, err := s.RecentObservations("engram", "project", 1)
+	recent, err := s.RecentObservations("mnemo", "project", 1)
 	if err != nil || len(recent) == 0 {
 		t.Fatalf("recent observations for timeline: %v len=%d", err, len(recent))
 	}
@@ -439,7 +439,7 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 
 	sessionSummary := handleSessionSummary(s)
 	summaryReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
-		"project": "engram",
+		"project": "mnemo",
 		"content": "## Goal\nImprove tests",
 	}}}
 	summaryRes, err := sessionSummary(context.Background(), summaryReq)
@@ -453,8 +453,8 @@ func TestHandlePromptContextStatsTimelineAndSessionHandlers(t *testing.T) {
 	sessionStart := handleSessionStart(s)
 	startReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"id":        "s-new",
-		"project":   "engram",
-		"directory": "/tmp/engram",
+		"project":   "mnemo",
+		"directory": "/tmp/mnemo",
 	}}}
 	startRes, err := sessionStart(context.Background(), startReq)
 	if err != nil {
@@ -551,7 +551,7 @@ func TestMCPHandlersErrorBranches(t *testing.T) {
 
 func TestMCPHandlersReturnErrorsWhenStoreClosed(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-closed", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-closed", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 
@@ -560,7 +560,7 @@ func TestMCPHandlersReturnErrorsWhenStoreClosed(t *testing.T) {
 		Type:      "decision",
 		Title:     "Title",
 		Content:   "Content",
-		Project:   "engram",
+		Project:   "mnemo",
 	})
 	if err != nil {
 		t.Fatalf("seed observation: %v", err)
@@ -594,7 +594,7 @@ func TestMCPHandlersReturnErrorsWhenStoreClosed(t *testing.T) {
 		t.Fatalf("expected delete to return tool error when store is closed")
 	}
 
-	promptRes, err := handleSavePrompt(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"content": "prompt", "project": "engram"}}})
+	promptRes, err := handleSavePrompt(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"content": "prompt", "project": "mnemo"}}})
 	if err != nil {
 		t.Fatalf("closed store save prompt call: %v", err)
 	}
@@ -634,7 +634,7 @@ func TestMCPHandlersReturnErrorsWhenStoreClosed(t *testing.T) {
 		t.Fatalf("expected get observation to return tool error when store is closed")
 	}
 
-	sessionSummaryRes, err := handleSessionSummary(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"project": "engram", "content": "summary"}}})
+	sessionSummaryRes, err := handleSessionSummary(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"project": "mnemo", "content": "summary"}}})
 	if err != nil {
 		t.Fatalf("closed store session summary call: %v", err)
 	}
@@ -642,7 +642,7 @@ func TestMCPHandlersReturnErrorsWhenStoreClosed(t *testing.T) {
 		t.Fatalf("expected session summary to return tool error when store is closed")
 	}
 
-	sessionStartRes, err := handleSessionStart(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"id": "s1", "project": "engram"}}})
+	sessionStartRes, err := handleSessionStart(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{"id": "s1", "project": "mnemo"}}})
 	if err != nil {
 		t.Fatalf("closed store session start call: %v", err)
 	}
@@ -684,14 +684,14 @@ func TestMCPAdditionalCoverageBranches(t *testing.T) {
 		t.Fatalf("expected none yet projects in stats output")
 	}
 
-	if err := s.CreateSession("s-extra", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-extra", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
-	firstID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "first", Content: "first content", Project: "engram"})
+	firstID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "first", Content: "first content", Project: "mnemo"})
 	if err != nil {
 		t.Fatalf("add first: %v", err)
 	}
-	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "second", Content: "second content", Project: "engram"})
+	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-extra", Type: "note", Title: "second", Content: "second content", Project: "mnemo"})
 	if err != nil {
 		t.Fatalf("add second: %v", err)
 	}
@@ -713,7 +713,7 @@ func TestMCPAdditionalCoverageBranches(t *testing.T) {
 	saveReq := mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
 		"title":   "Default values",
 		"content": "Ensure defaults for type and session are used",
-		"project": "engram",
+		"project": "mnemo",
 	}}}
 	saveRes, err := save(context.Background(), saveReq)
 	if err != nil {
@@ -760,7 +760,7 @@ func TestHandleSuggestTopicKeyReturnsErrorWhenSuggestionEmpty(t *testing.T) {
 
 func TestHandleUpdateAcceptsAllOptionalFields(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-all-fields", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-all-fields", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 	id, err := s.AddObservation(store.AddObservationParams{
@@ -768,7 +768,7 @@ func TestHandleUpdateAcceptsAllOptionalFields(t *testing.T) {
 		Type:      "decision",
 		Title:     "Original",
 		Content:   "Original content",
-		Project:   "engram",
+		Project:   "mnemo",
 		Scope:     "project",
 	})
 	if err != nil {
@@ -780,7 +780,7 @@ func TestHandleUpdateAcceptsAllOptionalFields(t *testing.T) {
 		"title":     "Updated",
 		"content":   "Updated content",
 		"type":      "architecture",
-		"project":   "engram",
+		"project":   "mnemo",
 		"scope":     "personal",
 		"topic_key": "architecture/auth-model",
 	}}})
@@ -794,12 +794,12 @@ func TestHandleUpdateAcceptsAllOptionalFields(t *testing.T) {
 
 func TestHandleContextWithSessionOnlyUsesNoneProjects(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-context-none", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-context-none", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 
 	res, err := handleContext(s)(context.Background(), mcppkg.CallToolRequest{Params: mcppkg.CallToolParams{Arguments: map[string]any{
-		"project": "engram",
+		"project": "mnemo",
 	}}})
 	if err != nil {
 		t.Fatalf("context handler error: %v", err)
@@ -833,18 +833,18 @@ func TestHandleStatsReturnsErrorWhenLoaderFails(t *testing.T) {
 
 func TestHandleTimelineBeforeSectionAndSummaryBranches(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-timeline", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-timeline", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
-	_, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "first", Content: "first", Project: "engram"})
+	_, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "first", Content: "first", Project: "mnemo"})
 	if err != nil {
 		t.Fatalf("add first observation: %v", err)
 	}
-	focusID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "second", Content: "second", Project: "engram"})
+	focusID, err := s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "second", Content: "second", Project: "mnemo"})
 	if err != nil {
 		t.Fatalf("add second observation: %v", err)
 	}
-	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "third", Content: "third", Project: "engram"})
+	_, err = s.AddObservation(store.AddObservationParams{SessionID: "s-timeline", Type: "note", Title: "third", Content: "third", Project: "mnemo"})
 	if err != nil {
 		t.Fatalf("add third observation: %v", err)
 	}
@@ -871,7 +871,7 @@ func TestHandleTimelineBeforeSectionAndSummaryBranches(t *testing.T) {
 
 func TestHandleGetObservationIncludesTopicAndToolMetadata(t *testing.T) {
 	s := newMCPTestStore(t)
-	if err := s.CreateSession("s-get-meta", "engram", "/tmp/engram"); err != nil {
+	if err := s.CreateSession("s-get-meta", "mnemo", "/tmp/mnemo"); err != nil {
 		t.Fatalf("create session: %v", err)
 	}
 	id, err := s.AddObservation(store.AddObservationParams{
@@ -879,7 +879,7 @@ func TestHandleGetObservationIncludesTopicAndToolMetadata(t *testing.T) {
 		Type:      "architecture",
 		Title:     "Auth model",
 		Content:   "Details",
-		Project:   "engram",
+		Project:   "mnemo",
 		ToolName:  "mcp-passive",
 		TopicKey:  "architecture/auth-model",
 	})
@@ -1337,8 +1337,8 @@ func TestDefaultSessionIDScopedByProject(t *testing.T) {
 	if got := defaultSessionID(""); got != "manual-save" {
 		t.Fatalf("expected manual-save for empty project, got %q", got)
 	}
-	if got := defaultSessionID("engram"); got != "manual-save-engram" {
-		t.Fatalf("expected manual-save-engram, got %q", got)
+	if got := defaultSessionID("mnemo"); got != "manual-save-mnemo" {
+		t.Fatalf("expected manual-save-mnemo, got %q", got)
 	}
 	if got := defaultSessionID("my-app"); got != "manual-save-my-app" {
 		t.Fatalf("expected manual-save-my-app, got %q", got)

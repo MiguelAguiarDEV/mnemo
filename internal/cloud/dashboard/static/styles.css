@@ -1,39 +1,39 @@
-/* Engram Cloud Dashboard - TUI-aligned visual system on top of Pico CSS */
+/* Mnemo Cloud Dashboard - TUI-aligned visual system on top of Pico CSS */
 
 :root {
-	--engram-base: #191724;
-	--engram-surface: #1f1d2e;
-	--engram-surface-soft: rgba(31, 29, 46, 0.82);
-	--engram-overlay: #6e6a86;
-	--engram-text: #e0def4;
-	--engram-muted: #908caa;
-	--engram-primary: #c4a7e7;
-	--engram-primary-hover: #d4b8f2;
-	--engram-success: #9ccfd8;
-	--engram-warning: #f6c177;
-	--engram-danger: #eb6f92;
-	--engram-accent: #ebbcba;
-	--engram-blue: #31748f;
-	--engram-shadow: rgba(9, 8, 16, 0.5);
-	--engram-font-display: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-	--engram-font-body: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+	--mnemo-base: #191724;
+	--mnemo-surface: #1f1d2e;
+	--mnemo-surface-soft: rgba(31, 29, 46, 0.82);
+	--mnemo-overlay: #6e6a86;
+	--mnemo-text: #e0def4;
+	--mnemo-muted: #908caa;
+	--mnemo-primary: #c4a7e7;
+	--mnemo-primary-hover: #d4b8f2;
+	--mnemo-success: #9ccfd8;
+	--mnemo-warning: #f6c177;
+	--mnemo-danger: #eb6f92;
+	--mnemo-accent: #ebbcba;
+	--mnemo-blue: #31748f;
+	--mnemo-shadow: rgba(9, 8, 16, 0.5);
+	--mnemo-font-display: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+	--mnemo-font-body: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
 }
 
 [data-theme="dark"] {
-	--pico-background-color: var(--engram-base);
-	--pico-card-background-color: var(--engram-surface);
-	--pico-color: var(--engram-text);
-	--pico-muted-color: var(--engram-muted);
-	--pico-primary: var(--engram-primary);
-	--pico-primary-hover: var(--engram-primary-hover);
-	--pico-border-color: var(--engram-overlay);
+	--pico-background-color: var(--mnemo-base);
+	--pico-card-background-color: var(--mnemo-surface);
+	--pico-color: var(--mnemo-text);
+	--pico-muted-color: var(--mnemo-muted);
+	--pico-primary: var(--mnemo-primary);
+	--pico-primary-hover: var(--mnemo-primary-hover);
+	--pico-border-color: var(--mnemo-overlay);
 	--pico-form-element-background-color: rgba(25, 23, 36, 0.88);
 	--pico-form-element-border-color: rgba(110, 106, 134, 0.7);
-	--pico-form-element-color: var(--engram-text);
+	--pico-form-element-color: var(--mnemo-text);
 	--pico-form-element-placeholder-color: rgba(144, 140, 170, 0.7);
-	--pico-primary-background: var(--engram-primary);
-	--pico-primary-inverse: var(--engram-base);
-	--pico-secondary: var(--engram-blue);
+	--pico-primary-background: var(--mnemo-primary);
+	--pico-primary-inverse: var(--mnemo-base);
+	--pico-secondary: var(--mnemo-blue);
 	--pico-secondary-hover: #3b85a3;
 }
 
@@ -44,8 +44,8 @@ body {
 
 body.shell-body {
 	margin: 0;
-	font-family: var(--engram-font-body);
-	color: var(--engram-text);
+	font-family: var(--mnemo-font-body);
+	color: var(--mnemo-text);
 	background:
 		radial-gradient(circle at top left, rgba(196, 167, 231, 0.2), transparent 28%),
 		radial-gradient(circle at 85% 18%, rgba(49, 116, 143, 0.2), transparent 22%),
@@ -62,7 +62,7 @@ textarea,
 table,
 th,
 td {
-	font-family: var(--engram-font-body);
+	font-family: var(--mnemo-font-body);
 }
 
 h1,
@@ -88,16 +88,16 @@ th,
 .user-name,
 .login-copy,
 .login-lead {
-	font-family: var(--engram-font-display);
+	font-family: var(--mnemo-font-display);
 }
 
 a {
-	color: var(--engram-primary);
+	color: var(--mnemo-primary);
 	text-decoration: none;
 }
 
 a:hover {
-	color: var(--engram-primary-hover);
+	color: var(--mnemo-primary-hover);
 }
 
 .shell-backdrop {
@@ -141,14 +141,14 @@ a:hover {
 	padding: 0.25rem 0.75rem;
 	border: 1px solid rgba(156, 207, 216, 0.5);
 	background: rgba(49, 116, 143, 0.18);
-	color: var(--engram-success);
+	color: var(--mnemo-success);
 	font-size: 0.74rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 }
 
 .status-copy {
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-size: 0.9rem;
 }
 
@@ -158,7 +158,7 @@ a:hover {
 	margin: 0 auto;
 	border: 1px solid rgba(110, 106, 134, 0.9);
 	box-shadow:
-		0 30px 80px var(--engram-shadow),
+		0 30px 80px var(--mnemo-shadow),
 		inset 0 0 0 1px rgba(196, 167, 231, 0.08);
 	background: rgba(14, 12, 23, 0.82);
 	backdrop-filter: blur(16px);
@@ -207,13 +207,13 @@ a:hover {
 	font-size: clamp(1.7rem, 3vw, 2.65rem);
 	font-weight: 700;
 	letter-spacing: -0.04em;
-	color: var(--engram-primary);
+	color: var(--mnemo-primary);
 	text-shadow: 0 0 24px rgba(196, 167, 231, 0.18);
 }
 
 .brand-subtitle {
 	margin: 0;
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-style: italic;
 	font-size: 0.95rem;
 }
@@ -222,7 +222,7 @@ a:hover {
 	display: flex;
 	align-items: center;
 	gap: 0.85rem;
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 }
 
 .user-name {
@@ -237,7 +237,7 @@ button.outline.secondary {
 	border-radius: 0;
 	border: 1px solid rgba(156, 207, 216, 0.65);
 	background: linear-gradient(180deg, rgba(49, 116, 143, 0.85), rgba(31, 29, 46, 0.95));
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
@@ -250,7 +250,7 @@ button:hover,
 button.outline.secondary:hover {
 	border-color: rgba(196, 167, 231, 0.7);
 	background: linear-gradient(180deg, rgba(196, 167, 231, 0.85), rgba(31, 29, 46, 0.95));
-	color: var(--engram-base);
+	color: var(--mnemo-base);
 }
 
 .shell-nav {
@@ -277,7 +277,7 @@ nav [role="tab"],
 	padding: 0.7rem 1rem;
 	border: 1px solid transparent;
 	background: rgba(31, 29, 46, 0.55);
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	text-transform: uppercase;
 	font-size: 0.78rem;
 	letter-spacing: 0.1em;
@@ -289,7 +289,7 @@ nav [role="tab"]:hover,
 .admin-nav a:hover {
 	transform: translateY(-1px);
 	border-color: rgba(156, 207, 216, 0.3);
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 nav [role="tab"][aria-selected="true"],
@@ -297,7 +297,7 @@ nav [role="tab"][aria-selected="true"],
 .admin-nav a.active {
 	border-color: rgba(196, 167, 231, 0.66);
 	background: linear-gradient(180deg, rgba(196, 167, 231, 0.22), rgba(31, 29, 46, 0.9));
-	color: var(--engram-primary);
+	color: var(--mnemo-primary);
 	box-shadow: inset 0 -2px 0 rgba(196, 167, 231, 0.7);
 }
 
@@ -316,7 +316,7 @@ nav [role="tab"][aria-selected="true"],
 }
 
 .shell-footer small {
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-size: 0.74rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -331,7 +331,7 @@ nav [role="tab"][aria-selected="true"],
 .metric-card,
 .empty-state {
 	border: 1px solid rgba(110, 106, 134, 0.85);
-	background: var(--engram-surface-soft);
+	background: var(--mnemo-surface-soft);
 	box-shadow: inset 0 0 0 1px rgba(196, 167, 231, 0.05);
 }
 
@@ -379,7 +379,7 @@ nav [role="tab"][aria-selected="true"],
 	font-size: 0.74rem;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
-	color: var(--engram-accent);
+	color: var(--mnemo-accent);
 }
 
 .hero-copy h2,
@@ -387,7 +387,7 @@ nav [role="tab"][aria-selected="true"],
 .login-container h2,
 .login-sidepanel h1 {
 	margin: 0 0 1rem;
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 	font-size: clamp(1.7rem, 3.4vw, 2.9rem);
 	line-height: 0.98;
 	letter-spacing: -0.05em;
@@ -398,7 +398,7 @@ nav [role="tab"][aria-selected="true"],
 .section-block-title,
 .project-card h3,
 .empty-state h3 {
-	font-family: var(--engram-font-display);
+	font-family: var(--mnemo-font-display);
 	letter-spacing: -0.03em;
 }
 
@@ -419,7 +419,7 @@ label,
 .status-copy {
 	font-size: 1rem;
 	line-height: 1.72;
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .hero-lead,
@@ -437,7 +437,7 @@ label,
 	padding: 1rem;
 	border: 1px solid rgba(110, 106, 134, 0.72);
 	background: rgba(13, 11, 20, 0.75);
-	color: var(--engram-success);
+	color: var(--mnemo-success);
 	font-size: 0.86rem;
 	line-height: 1.85;
 }
@@ -450,7 +450,7 @@ label,
 .console-key {
 	display: inline-block;
 	min-width: 7.2rem;
-	color: var(--engram-primary);
+	color: var(--mnemo-primary);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
@@ -479,7 +479,7 @@ label,
 
 .metric-value,
 .stat-value {
-	color: var(--engram-success);
+	color: var(--mnemo-success);
 	font-size: clamp(1.7rem, 3vw, 2.6rem);
 	line-height: 1;
 	font-weight: 700;
@@ -500,7 +500,7 @@ label,
 	font-size: 0.8rem;
 	text-transform: uppercase;
 	letter-spacing: 0.12em;
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	margin: 0;
 }
 
@@ -527,7 +527,7 @@ label,
 
 .section-block-title {
 	margin: 1.4rem 0 0.85rem;
-	color: var(--engram-accent);
+	color: var(--mnemo-accent);
 }
 
 .project-chip-list,
@@ -552,25 +552,25 @@ label,
 .badge-success {
 	border-color: rgba(156, 207, 216, 0.45);
 	background: rgba(49, 116, 143, 0.22);
-	color: var(--engram-success);
+	color: var(--mnemo-success);
 }
 
 .badge-warning {
 	border-color: rgba(246, 193, 119, 0.4);
 	background: rgba(246, 193, 119, 0.16);
-	color: var(--engram-warning);
+	color: var(--mnemo-warning);
 }
 
 .badge-danger {
 	border-color: rgba(235, 111, 146, 0.4);
 	background: rgba(235, 111, 146, 0.16);
-	color: var(--engram-danger);
+	color: var(--mnemo-danger);
 }
 
 .badge-muted {
 	border-color: rgba(110, 106, 134, 0.42);
 	background: rgba(110, 106, 134, 0.15);
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 }
 
 .browser-controls {
@@ -608,8 +608,8 @@ label,
 	padding: 0.4rem 0.72rem;
 	border: 1px solid rgba(110, 106, 134, 0.55);
 	background: rgba(13, 11, 20, 0.5);
-	color: var(--engram-muted);
-	font-family: var(--engram-font-display);
+	color: var(--mnemo-muted);
+	font-family: var(--mnemo-font-display);
 	font-size: 0.74rem;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
@@ -618,13 +618,13 @@ label,
 
 .type-pill:hover {
 	border-color: rgba(156, 207, 216, 0.4);
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .type-pill.active {
 	border-color: rgba(196, 167, 231, 0.7);
 	background: rgba(196, 167, 231, 0.16);
-	color: var(--engram-primary);
+	color: var(--mnemo-primary);
 }
 
 .card {
@@ -657,9 +657,9 @@ label,
 
 .card header strong {
 	flex: 1;
-	font-family: var(--engram-font-display);
+	font-family: var(--mnemo-font-display);
 	font-size: 1rem;
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .card header strong a {
@@ -677,12 +677,12 @@ label,
 
 .prompt-list .card p a,
 .observation-list .card p a {
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .prompt-list .card p a:hover,
 .observation-list .card p a:hover {
-	color: var(--engram-primary-hover);
+	color: var(--mnemo-primary-hover);
 }
 
 .card footer {
@@ -692,7 +692,7 @@ label,
 	margin-top: 0.95rem;
 	padding-top: 0.75rem;
 	border-top: 1px solid rgba(110, 106, 134, 0.28);
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-size: 0.82rem;
 }
 
@@ -751,7 +751,7 @@ td {
 }
 
 th {
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-size: 0.72rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -767,8 +767,8 @@ tbody tr:hover {
 }
 
 .muted {
-	color: var(--engram-muted);
-	font-family: var(--engram-font-display);
+	color: var(--mnemo-muted);
+	font-family: var(--mnemo-font-display);
 	font-size: 0.86rem;
 }
 
@@ -786,7 +786,7 @@ tbody tr:hover {
 .empty-state h3 {
 	margin: 0;
 	font-size: clamp(1.5rem, 3vw, 2.4rem);
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .observation-content-block {
@@ -808,18 +808,18 @@ tbody tr:hover {
 
 .structured-block h4 {
 	margin: 0 0 0.55rem;
-	font-family: var(--engram-font-display);
+	font-family: var(--mnemo-font-display);
 	font-size: 0.82rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	color: var(--engram-accent);
+	color: var(--mnemo-accent);
 }
 
 .structured-block p {
 	margin: 0;
 	font-size: 1.02rem;
 	line-height: 1.75;
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .observation-content-block pre {
@@ -829,8 +829,8 @@ tbody tr:hover {
 	white-space: pre-wrap;
 	background: rgba(13, 11, 20, 0.76);
 	border: 1px solid rgba(110, 106, 134, 0.48);
-	color: var(--engram-text);
-	font-family: var(--engram-font-display);
+	color: var(--mnemo-text);
+	font-family: var(--mnemo-font-display);
 	font-size: 0.9rem;
 	line-height: 1.65;
 }
@@ -867,7 +867,7 @@ tbody tr:hover {
 .stat-copy {
 	font-size: 1rem;
 	line-height: 1.35;
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .switch-form {
@@ -913,7 +913,7 @@ tbody tr:hover {
 
 .terminal-note {
 	margin: 0;
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 }
 
 .login-shell {
@@ -952,7 +952,7 @@ tbody tr:hover {
 .login-form label {
 	display: grid;
 	gap: 0.45rem;
-	color: var(--engram-muted);
+	color: var(--mnemo-muted);
 	font-size: 0.86rem;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
@@ -969,7 +969,7 @@ select {
 	background: rgba(13, 11, 20, 0.76);
 	border: 1px solid rgba(110, 106, 134, 0.65);
 	box-shadow: inset 0 0 0 1px rgba(196, 167, 231, 0.04);
-	color: var(--engram-text);
+	color: var(--mnemo-text);
 }
 
 .login-form input:focus,
@@ -987,7 +987,7 @@ select:focus {
 	padding: 0.8rem 1rem;
 	border: 1px solid rgba(235, 111, 146, 0.42);
 	background: rgba(235, 111, 146, 0.16);
-	color: var(--engram-danger);
+	color: var(--mnemo-danger);
 }
 
 @media (max-width: 900px) {

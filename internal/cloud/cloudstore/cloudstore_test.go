@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -39,7 +39,7 @@ func testDSN(tb testing.TB) string {
 		Tag:        "16-alpine",
 		Env: []string{
 			"POSTGRES_PASSWORD=test",
-			"POSTGRES_DB=engram_test",
+			"POSTGRES_DB=mnemo_test",
 			"POSTGRES_USER=postgres",
 		},
 	}, func(config *docker.HostConfig) {
@@ -54,7 +54,7 @@ func testDSN(tb testing.TB) string {
 		_ = pool.Purge(resource)
 	})
 
-	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_test?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_test?sslmode=disable",
 		resource.GetPort("5432/tcp"))
 
 	// Wait for Postgres to be ready.
@@ -812,7 +812,7 @@ func TestTruncate(t *testing.T) {
 func TestAppendMutationSingleAndPull(t *testing.T) {
 	cs, userID := testStoreAndUser(t)
 
-	payload := json.RawMessage(`{"id":"s1","project":"engram","directory":"/work"}`)
+	payload := json.RawMessage(`{"id":"s1","project":"mnemo","directory":"/work"}`)
 	seq, err := cs.AppendMutation(userID, "session", "s1", "upsert", payload)
 	if err != nil {
 		t.Fatalf("AppendMutation: %v", err)
@@ -950,7 +950,7 @@ func TestAppendMutationBatchEmptyIsNoOp(t *testing.T) {
 func TestProjectSyncControlsPauseBatchAndPull(t *testing.T) {
 	cs, userID := testStoreAndUser(t)
 
-	if err := cs.SetProjectSyncEnabled("engram", false, userID, "Security review"); err != nil {
+	if err := cs.SetProjectSyncEnabled("mnemo", false, userID, "Security review"); err != nil {
 		t.Fatalf("SetProjectSyncEnabled: %v", err)
 	}
 
@@ -960,7 +960,7 @@ func TestProjectSyncControlsPauseBatchAndPull(t *testing.T) {
 	}
 	foundPaused := false
 	for _, control := range controls {
-		if control.Project == "engram" && !control.SyncEnabled {
+		if control.Project == "mnemo" && !control.SyncEnabled {
 			foundPaused = true
 			if control.PausedReason == nil || *control.PausedReason != "Security review" {
 				t.Fatalf("expected paused reason to persist, got %+v", control.PausedReason)
@@ -968,20 +968,20 @@ func TestProjectSyncControlsPauseBatchAndPull(t *testing.T) {
 		}
 	}
 	if !foundPaused {
-		t.Fatal("expected paused project control for engram")
+		t.Fatal("expected paused project control for mnemo")
 	}
 
 	_, err = cs.AppendMutationBatch(userID, []PushMutationEntry{{
 		Entity:    "session",
 		EntityKey: "s-paused",
 		Op:        "upsert",
-		Payload:   json.RawMessage(`{"id":"s-paused","project":"engram","directory":"/work"}`),
+		Payload:   json.RawMessage(`{"id":"s-paused","project":"mnemo","directory":"/work"}`),
 	}})
 	if !errors.Is(err, ErrProjectSyncPaused) {
 		t.Fatalf("expected ErrProjectSyncPaused, got %v", err)
 	}
 
-	if _, err := cs.AppendMutation(userID, "session", "s-paused", "upsert", json.RawMessage(`{"id":"s-paused","project":"engram","directory":"/work"}`)); err != nil {
+	if _, err := cs.AppendMutation(userID, "session", "s-paused", "upsert", json.RawMessage(`{"id":"s-paused","project":"mnemo","directory":"/work"}`)); err != nil {
 		t.Fatalf("AppendMutation: %v", err)
 	}
 	if _, err := cs.AppendMutation(userID, "session", "s-open", "upsert", json.RawMessage(`{"id":"s-open","project":"open-proj","directory":"/work"}`)); err != nil {
@@ -1028,14 +1028,14 @@ func TestPullMutationsUserIsolation(t *testing.T) {
 func TestApplyMutationPayloadSession(t *testing.T) {
 	cs, userID := testStoreAndUser(t)
 
-	payload := json.RawMessage(`{"id":"apply-s1","project":"engram","directory":"/work"}`)
+	payload := json.RawMessage(`{"id":"apply-s1","project":"mnemo","directory":"/work"}`)
 	err := cs.ApplyMutationPayload(userID, "session", "upsert", payload)
 	if err != nil {
 		t.Fatalf("ApplyMutationPayload session: %v", err)
 	}
 
 	// Verify the session was materialized
-	sessions, err := cs.RecentSessions(userID, "engram", 10)
+	sessions, err := cs.RecentSessions(userID, "mnemo", 10)
 	if err != nil {
 		t.Fatalf("RecentSessions: %v", err)
 	}
@@ -1054,13 +1054,13 @@ func TestApplyMutationPayloadSession(t *testing.T) {
 func TestApplyMutationPayloadSessionAcceptsStringifiedJSON(t *testing.T) {
 	cs, userID := testStoreAndUser(t)
 
-	payload := json.RawMessage(`"{\"id\":\"apply-s2\",\"project\":\"engram\",\"directory\":\"/compat\"}"`)
+	payload := json.RawMessage(`"{\"id\":\"apply-s2\",\"project\":\"mnemo\",\"directory\":\"/compat\"}"`)
 	err := cs.ApplyMutationPayload(userID, "session", "upsert", payload)
 	if err != nil {
 		t.Fatalf("ApplyMutationPayload stringified session: %v", err)
 	}
 
-	sessions, err := cs.RecentSessions(userID, "engram", 10)
+	sessions, err := cs.RecentSessions(userID, "mnemo", 10)
 	if err != nil {
 		t.Fatalf("RecentSessions: %v", err)
 	}
@@ -1076,7 +1076,7 @@ func TestApplyMutationPayloadObservation(t *testing.T) {
 	cs, userID := testStoreAndUser(t)
 
 	// First create the session so FK is satisfied
-	err := cs.CreateSession(userID, "obs-sess", "engram", "/work")
+	err := cs.CreateSession(userID, "obs-sess", "mnemo", "/work")
 	if err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}

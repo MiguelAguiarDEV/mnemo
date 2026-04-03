@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug in engram
+about: Report a bug in mnemo
 labels: bug
 ---
 
@@ -25,5 +25,5 @@ labels: bug
 ## Environment
 
 - OS:
-- engram version: <!-- `engram version` -->
+- mnemo version: <!-- `mnemo version` -->
 - Agent: <!-- Claude Code / OpenCode / other -->

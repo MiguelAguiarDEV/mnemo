@@ -3,12 +3,12 @@ package cloud
 import "testing"
 
 func TestConfigFromEnvPrefersCanonicalNames(t *testing.T) {
-	t.Setenv("ENGRAM_DATABASE_URL", "postgres://canonical@localhost/canonical")
-	t.Setenv("ENGRAM_JWT_SECRET", "canonical-secret-value-with-32-bytes!!")
-	t.Setenv("ENGRAM_CLOUD_DSN", "postgres://legacy@localhost/legacy")
-	t.Setenv("ENGRAM_CLOUD_JWT_SECRET", "legacy-secret-value-with-32-bytes!!!!")
-	t.Setenv("ENGRAM_CLOUD_CORS_ORIGINS", " https://one.example , https://two.example ")
-	t.Setenv("ENGRAM_CLOUD_MAX_POOL", "25")
+	t.Setenv("MNEMO_DATABASE_URL", "postgres://canonical@localhost/canonical")
+	t.Setenv("MNEMO_JWT_SECRET", "canonical-secret-value-with-32-bytes!!")
+	t.Setenv("MNEMO_CLOUD_DSN", "postgres://legacy@localhost/legacy")
+	t.Setenv("MNEMO_CLOUD_JWT_SECRET", "legacy-secret-value-with-32-bytes!!!!")
+	t.Setenv("MNEMO_CLOUD_CORS_ORIGINS", " https://one.example , https://two.example ")
+	t.Setenv("MNEMO_CLOUD_MAX_POOL", "25")
 
 	cfg := ConfigFromEnv()
 
@@ -30,7 +30,7 @@ func TestConfigFromEnvPrefersCanonicalNames(t *testing.T) {
 }
 
 func TestConfigFromEnvParsesAdminEmail(t *testing.T) {
-	t.Setenv("ENGRAM_CLOUD_ADMIN", "  admin@example.com  ")
+	t.Setenv("MNEMO_CLOUD_ADMIN", "  admin@example.com  ")
 
 	cfg := ConfigFromEnv()
 
@@ -40,8 +40,8 @@ func TestConfigFromEnvParsesAdminEmail(t *testing.T) {
 }
 
 func TestConfigFromEnvAdminEmailEmpty(t *testing.T) {
-	// Ensure ENGRAM_CLOUD_ADMIN is not set.
-	t.Setenv("ENGRAM_CLOUD_ADMIN", "")
+	// Ensure MNEMO_CLOUD_ADMIN is not set.
+	t.Setenv("MNEMO_CLOUD_ADMIN", "")
 
 	cfg := ConfigFromEnv()
 
@@ -51,11 +51,11 @@ func TestConfigFromEnvAdminEmailEmpty(t *testing.T) {
 }
 
 func TestConfigFromEnvFallsBackToLegacyNames(t *testing.T) {
-	t.Setenv("ENGRAM_DATABASE_URL", "")
-	t.Setenv("ENGRAM_JWT_SECRET", "")
-	t.Setenv("ENGRAM_CLOUD_DSN", "postgres://legacy@localhost/legacy")
-	t.Setenv("ENGRAM_CLOUD_JWT_SECRET", "legacy-secret-value-with-32-bytes!!!!")
-	t.Setenv("ENGRAM_PORT", "9090")
+	t.Setenv("MNEMO_DATABASE_URL", "")
+	t.Setenv("MNEMO_JWT_SECRET", "")
+	t.Setenv("MNEMO_CLOUD_DSN", "postgres://legacy@localhost/legacy")
+	t.Setenv("MNEMO_CLOUD_JWT_SECRET", "legacy-secret-value-with-32-bytes!!!!")
+	t.Setenv("MNEMO_PORT", "9090")
 
 	cfg := ConfigFromEnv()
 

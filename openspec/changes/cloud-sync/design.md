@@ -2,7 +2,7 @@
 
 ## Technical Approach
 
-Cloud sync adds a hosted Postgres-backed server mode to Engram so teams can share memories across machines without git. Local SQLite instances push/pull compressed JSONL chunks over HTTP to a cloud server that stores them in Postgres with tsvector FTS. This reuses the existing chunk-based sync format (`internal/sync`) but replaces the filesystem transport with an HTTP transport, and adds a new `internal/cloud/` package tree for Postgres storage, auth, and cloud-specific server routes.
+Cloud sync adds a hosted Postgres-backed server mode to Mnemo so teams can share memories across machines without git. Local SQLite instances push/pull compressed JSONL chunks over HTTP to a cloud server that stores them in Postgres with tsvector FTS. This reuses the existing chunk-based sync format (`internal/sync`) but replaces the filesystem transport with an HTTP transport, and adds a new `internal/cloud/` package tree for Postgres storage, auth, and cloud-specific server routes.
 
 The approach deliberately keeps cloud concerns separate from the local SQLite store. The existing `internal/store/` package is deeply coupled to SQLite (FTS5 VIRTUAL TABLE, `datetime('now')`, PRAGMA statements, `modernc.org/sqlite` driver). Rather than abstracting behind an interface (which would require rewriting 15+ methods), the cloud server gets its own storage layer optimized for Postgres.
 
@@ -38,7 +38,7 @@ References: proposal at `openspec/changes/cloud-sync/proposal.md`, specs at `ope
 **Choice**: Use Postgres `tsvector` with `GENERATED ALWAYS AS ... STORED` column and GIN index. Weight title as `A`, content as `B`, type/project as `C`.
 
 **Alternatives considered**:
-1. **pg_trgm (trigram)** -- Good for fuzzy/partial matching but poor for relevance ranking. Rejected because engram's search is keyword-based like FTS5.
+1. **pg_trgm (trigram)** -- Good for fuzzy/partial matching but poor for relevance ranking. Rejected because mnemo.s search is keyword-based like FTS5.
 2. **ElasticSearch/Meilisearch** -- Rejected. Adds a second service to deploy. Postgres tsvector is sufficient for the expected data volume (thousands to low millions of observations per team).
 3. **FTS5 over SQLite in the cloud** -- Rejected. SQLite is not designed for concurrent multi-writer access from a web server.
 
@@ -65,13 +65,13 @@ References: proposal at `openspec/changes/cloud-sync/proposal.md`, specs at `ope
 
 **Rationale**: `lib/pq` maps 1:1 to the existing `database/sql` patterns in `internal/store/`. Same `sql.Open`, same `*sql.DB`, same `*sql.Rows` scanning. Developers moving between local store and cloud store see identical Go patterns. The performance difference is negligible for a memory service.
 
-### Decision: `--mode cloud` Flag on `engram serve`
+### Decision: `--mode cloud` Flag on `mnemo serve`
 
 **Choice**: Add a `--mode` flag to the existing `serve` command. `--mode local` (default) starts the current SQLite-backed server. `--mode cloud` starts the Postgres-backed cloud server with auth middleware.
 
 **Alternatives considered**:
-1. **Separate binary `engram-cloud`** -- Rejected. Increases build/release complexity and confuses users about which binary to deploy.
-2. **Separate `engram cloud-serve` subcommand** -- Viable but less discoverable. The `serve` command already exists and users expect it.
+1. **Separate binary `mnemo-cloud`** -- Rejected. Increases build/release complexity and confuses users about which binary to deploy.
+2. **Separate `mnemo cloud-serve` subcommand** -- Viable but less discoverable. The `serve` command already exists and users expect it.
 
 **Rationale**: A single binary with a mode flag keeps deployment simple. The cloud mode reads Postgres config from env vars and starts the cloud server stack instead of the local SQLite stack.
 
@@ -82,7 +82,7 @@ References: proposal at `openspec/changes/cloud-sync/proposal.md`, specs at `ope
 ### Local Push (Client -> Cloud)
 
 ```
-  Local Engram                             Cloud Server
+  Local Mnemo                             Cloud Server
   ┌──────────────┐                        ┌──────────────────────┐
   │  SQLite DB   │                        │   Auth Middleware     │
   │  (store.go)  │                        │   (JWT/API key)      │
@@ -107,7 +107,7 @@ References: proposal at `openspec/changes/cloud-sync/proposal.md`, specs at `ope
 ### Local Pull (Cloud -> Client)
 
 ```
-  Local Engram                             Cloud Server
+  Local Mnemo                             Cloud Server
   ┌──────────────┐                        ┌──────────────────────┐
   │   Syncer     │   GET /cloud/pull      │   CloudServer        │
   │ + Remote     │ ──────────────────────>│   (cloudserver.go)   │
@@ -145,8 +145,8 @@ References: proposal at `openspec/changes/cloud-sync/proposal.md`, specs at `ope
 ## Package Layout (Directory Tree)
 
 ```
-engram/
-├── cmd/engram/
+mnemo/
+├── cmd/mnemo/
 │   └── main.go                          # MODIFY: add --mode cloud flag
 ├── internal/
 │   ├── store/
@@ -184,7 +184,7 @@ engram/
 
 | File | Action | Description |
 |------|--------|-------------|
-| `cmd/engram/main.go` | Modify | Add `--mode cloud` flag to `serve`, add `ENGRAM_CLOUD_*` env parsing, import cloud packages |
+| `cmd/mnemo/main.go` | Modify | Add `--mode cloud` flag to `serve`, add `MNEMO_CLOUD_*` env parsing, import cloud packages |
 | `internal/sync/sync.go` | Modify | Extract Transport interface, refactor Syncer to use Transport instead of direct filesystem I/O |
 | `internal/sync/transport.go` | Create | `Transport` interface definition + `FileTransport` implementation (extracts current fs logic) |
 | `internal/sync/transport_test.go` | Create | Unit tests for FileTransport |
@@ -323,7 +323,7 @@ CREATE INDEX idx_refresh_team ON refresh_tokens(team_id);
 ### Server Struct
 
 ```go
-// Package cloudserver provides the HTTP API for Engram cloud mode.
+// Package cloudserver provides the HTTP API for Mnemo cloud mode.
 package cloudserver
 
 type CloudServer struct {
@@ -393,7 +393,7 @@ All `/cloud/*` routes are prefixed to avoid collision with local server routes i
 func cmdServe(cfg store.Config) {
     mode := "local"  // default
     // Parse --mode flag from os.Args
-    // Parse ENGRAM_MODE env var as fallback
+    // Parse MNEMO_MODE env var as fallback
 
     switch mode {
     case "local":
@@ -600,7 +600,7 @@ Client (RemoteTransport)                    Cloud Server
 
 // Transport defines how chunks are read and written during sync.
 // This is the abstraction that allows the same Syncer to work with
-// both local filesystem (.engram/ directory) and remote cloud server.
+// both local filesystem (.mnemo/ directory) and remote cloud server.
 type Transport interface {
     // ReadManifest returns the manifest (chunk index).
     // Returns an empty manifest if none exists yet.
@@ -626,7 +626,7 @@ type Transport interface {
 // FileTransport reads/writes chunks to the local filesystem.
 // This is the existing behavior, extracted from Syncer methods.
 type FileTransport struct {
-    syncDir string // Path to .engram/ directory
+    syncDir string // Path to .mnemo/ directory
 }
 
 func NewFileTransport(syncDir string) *FileTransport {
@@ -643,9 +643,9 @@ func (ft *FileTransport) ReadChunk(id string) ([]byte, error)           { /* exi
 
 ```go
 // Package remote
-// RemoteTransport pushes/pulls chunks over HTTP to an Engram cloud server.
+// RemoteTransport pushes/pulls chunks over HTTP to an Mnemo cloud server.
 type RemoteTransport struct {
-    baseURL    string       // e.g. "https://engram.example.com"
+    baseURL    string       // e.g. "https://mnemo.example.com"
     token      string       // JWT or API key
     httpClient *http.Client
 }
@@ -710,11 +710,11 @@ func NewWithTransport(s *store.Store, transport Transport) *Syncer {
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ENGRAM_DATABASE_URL` | Postgres connection string for `engram cloud serve` | (required) |
-| `ENGRAM_JWT_SECRET` | HMAC secret for JWT signing (min 32 chars) | (required) |
-| `ENGRAM_CLOUD_CORS_ORIGINS` | Comma-separated allowed origins | `*` |
-| `ENGRAM_PORT` | HTTP server port | `7437` |
-| `ENGRAM_DATA_DIR` | Local SQLite data directory | `~/.engram` |
+| `MNEMO_DATABASE_URL` | Postgres connection string for `mnemo cloud serve` | (required) |
+| `MNEMO_JWT_SECRET` | HMAC secret for JWT signing (min 32 chars) | (required) |
+| `MNEMO_CLOUD_CORS_ORIGINS` | Comma-separated allowed origins | `*` |
+| `MNEMO_PORT` | HTTP server port | `7437` |
+| `MNEMO_DATA_DIR` | Local SQLite data directory | `~/.mnemo` |
 
 ### Cloud Config Struct
 
@@ -730,10 +730,10 @@ type Config struct {
 
 func ConfigFromEnv() Config {
     return Config{
-        DSN:            os.Getenv("ENGRAM_DATABASE_URL"),
-        JWTSecret:      os.Getenv("ENGRAM_JWT_SECRET"),
-        CORSOrigins:    strings.Split(os.Getenv("ENGRAM_CLOUD_CORS_ORIGINS"), ","),
-        MaxPoolConns:   envInt("ENGRAM_CLOUD_MAX_POOL", 25),
+        DSN:            os.Getenv("MNEMO_DATABASE_URL"),
+        JWTSecret:      os.Getenv("MNEMO_JWT_SECRET"),
+        CORSOrigins:    strings.Split(os.Getenv("MNEMO_CLOUD_CORS_ORIGINS"), ","),
+        MaxPoolConns:   envInt("MNEMO_CLOUD_MAX_POOL", 25),
         MigrateOnStart: true,
     }
 }
@@ -742,15 +742,15 @@ func ConfigFromEnv() Config {
 ### Client Config (for RemoteTransport)
 
 ```go
-// Stored in ~/.engram/cloud.json
+// Stored in ~/.mnemo/cloud.json
 {
-    "server":  "https://engram.example.com",
+    "server":  "https://mnemo.example.com",
     "token":   "engr_a3f8c1d2...",        // API key
     "team":    "my-team"
 }
 ```
 
-Created by `engram cloud login` (future CLI command, not in this phase).
+Created by `mnemo cloud login` (future CLI command, not in this phase).
 
 ---
 
@@ -821,7 +821,7 @@ func (rt *RemoteTransport) doWithRetry(req *http.Request) (*http.Response, error
 ### Token Storage
 
 - **JWT secret**: Environment variable only. NEVER logged, NEVER in config files.
-- **API keys**: Raw key shown once at creation. Stored as bcrypt hash in Postgres. Client stores in `~/.engram/cloud.json` with file permissions `0600`.
+- **API keys**: Raw key shown once at creation. Stored as bcrypt hash in Postgres. Client stores in `~/.mnemo/cloud.json` with file permissions `0600`.
 - **Refresh tokens**: Stored as SHA-256 hash in Postgres. Raw token sent to client only in login/refresh responses.
 
 ### Credential Management
@@ -870,12 +870,12 @@ func TestCloudStoreSearch(t *testing.T) {
 
     resource, err := pool.Run("postgres", "16-alpine", []string{
         "POSTGRES_PASSWORD=test",
-        "POSTGRES_DB=engram_test",
+        "POSTGRES_DB=mnemo_test",
     })
     require.NoError(t, err)
     defer pool.Purge(resource)
 
-    dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/engram_test?sslmode=disable",
+    dsn := fmt.Sprintf("postgres://postgres:test@localhost:%s/mnemo_test?sslmode=disable",
         resource.GetPort("5432/tcp"))
 
     // Wait for Postgres to be ready
@@ -898,7 +898,7 @@ func TestCloudStoreSearch(t *testing.T) {
 ## Dependency Diagram
 
 ```
-cmd/engram/main.go
+cmd/mnemo/main.go
     │
     ├── internal/store        (SQLite, unchanged)
     ├── internal/server       (local HTTP, unchanged)
@@ -929,7 +929,7 @@ cmd/engram/main.go
 
 ### Phase 1: Transport Refactor (Non-Breaking)
 
-Refactor `internal/sync/` to use the Transport interface. `NewLocal()` wrapper maintains backwards compatibility. The CLI `engram sync` command continues to work identically.
+Refactor `internal/sync/` to use the Transport interface. `NewLocal()` wrapper maintains backwards compatibility. The CLI `mnemo sync` command continues to work identically.
 
 ### Phase 2: Cloud Infrastructure
 
@@ -937,7 +937,7 @@ Add `internal/cloud/` package tree. The cloud server is opt-in via `--mode cloud
 
 ### Phase 3: Remote Transport + CLI
 
-Add `engram sync --remote` flag and `RemoteTransport`. Users can push/pull to cloud by configuring `~/.engram/cloud.json`.
+Add `mnemo sync --remote` flag and `RemoteTransport`. Users can push/pull to cloud by configuring `~/.mnemo/cloud.json`.
 
 ### Rollback Plan
 
@@ -951,7 +951,7 @@ Each phase is independently deployable and revertable because cloud packages are
 
 ## Open Questions
 
-- [ ] **Team provisioning**: How are teams created initially? Self-service signup or admin CLI command? For MVP, likely `engram cloud create-team <name>` CLI command that inserts directly into Postgres.
+- [ ] **Team provisioning**: How are teams created initially? Self-service signup or admin CLI command? For MVP, likely `mnemo cloud create-team <name>` CLI command that inserts directly into Postgres.
 - [ ] **Conflict resolution on pull**: If two developers save observations with the same `topic_key`, who wins? Current proposal: last-write-wins (same as local SQLite behavior with `topic_key` upserts). May need CRDTs or manual merge in the future.
 - [ ] **Chunk storage on cloud**: Should the cloud server store the raw gzipped chunk blobs (for fast re-serve on pull), or re-export from Postgres on each pull? Storing blobs is faster but doubles storage. Re-exporting is slower but eliminates blob management. Recommendation: store blobs in a `chunk_blobs` table for v1, revisit if storage becomes an issue.
 - [ ] **Rate limiting**: Should the cloud server rate-limit push/pull operations? Not critical for v1 (teams are small), but should be planned for the middleware stack.

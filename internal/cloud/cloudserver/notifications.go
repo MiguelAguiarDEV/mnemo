@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
+	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
 )
 
 // handleSendNotification processes POST /api/notifications.
