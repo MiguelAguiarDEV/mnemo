@@ -276,9 +276,34 @@ func (o *Orchestrator) initSkillsV2(logger *slog.Logger) {
 	o.dispatcher.Register(athena.NewSearchMemoryTool(engramBin, nil))
 	o.dispatcher.Register(athena.NewSaveMemoryTool(engramBin, nil))
 
+	// Filesystem tools (read_file, write_file, edit_file)
+	allowedDirs := []string{os.Getenv("HOME") + "/projects", "/tmp"}
+	if extraDirs := os.Getenv("JARVIS_ALLOWED_DIRS"); extraDirs != "" {
+		for _, d := range strings.Split(extraDirs, ":") {
+			d = strings.TrimSpace(d)
+			if d != "" {
+				allowedDirs = append(allowedDirs, d)
+			}
+		}
+	}
+	pathValidator := athena.NewPathValidator(allowedDirs)
+	o.dispatcher.Register(athena.NewReadFileTool(pathValidator))
+	o.dispatcher.Register(athena.NewWriteFileTool(pathValidator))
+	o.dispatcher.Register(athena.NewEditFileTool(pathValidator))
+
+	// Shell tools (bash, grep, glob)
+	o.dispatcher.Register(athena.NewBashTool(athena.BashToolConfig{}))
+	o.dispatcher.Register(athena.NewGrepTool())
+	o.dispatcher.Register(athena.NewGlobTool())
+
+	// Web tool (fetch_url)
+	o.dispatcher.Register(athena.NewFetchURLTool(athena.FetchURLConfig{
+		AllowPrivateIPs: os.Getenv("JARVIS_ALLOW_PRIVATE_IPS") == "true",
+	}))
+
 	slog.Info("SKILLS_V2 initialized",
 		"registry_skills", len(o.registry.AlwaysSkills()),
-		"tools", 11,
+		"tools", 18,
 	)
 }
 
