@@ -36,6 +36,7 @@ import (
 	"github.com/Gentleman-Programming/engram/internal/cloud/jarvis"
 	"github.com/Gentleman-Programming/engram/internal/cloud/notifications"
 	"github.com/Gentleman-Programming/engram/internal/cloud/remote"
+	"github.com/Gentleman-Programming/engram/internal/gateway"
 	"github.com/Gentleman-Programming/engram/internal/mcp"
 	"github.com/Gentleman-Programming/engram/internal/server"
 	"github.com/Gentleman-Programming/engram/internal/setup"
@@ -1209,11 +1210,63 @@ func cmdCloudServe() {
 	log.Println("[engram-cloud] starting JARVIS ticker (proactive health checks)")
 	orch.StartTicker(ctx)
 
+	// ── Gateway setup ──────────────────────────────────────────────────────
+	// Create Gateway with JARVIS orchestrator as handler.
+	gwHandler := func(gwCtx context.Context, msg gateway.IncomingMessage) (gateway.OutgoingMessage, error) {
+		convIDStr := msg.Metadata["conversation_id"]
+		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
+		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, nil)
+		if chatErr != nil {
+			return gateway.OutgoingMessage{}, chatErr
+		}
+		return gateway.OutgoingMessage{
+			ChannelName: msg.ChannelName,
+			RecipientID: msg.SenderID,
+			Text:        resp,
+			Format:      gateway.FormatMarkdown,
+			ReplyTo:     msg.ReplyTo,
+		}, nil
+	}
+	gw := gateway.New(gwHandler)
+
+	// Web channel (always enabled).
+	webCh := gateway.NewWebChannel(gw)
+	if err := gw.Register(webCh); err != nil {
+		log.Printf("[engram-cloud] WARN: failed to register web channel: %v", err)
+	}
+
+	// Discord channel (opt-in via JARVIS_DISCORD_ENABLED).
+	discordEnabled := os.Getenv("JARVIS_DISCORD_ENABLED") == "true"
+	discordToken := os.Getenv("DISCORD_BOT_TOKEN")
+	discordUserIDs := os.Getenv("DISCORD_USER_ID")
+
+	var discordCh *gateway.DiscordChannel
+	if discordEnabled && discordToken != "" {
+		allowedUsers := strings.Split(discordUserIDs, ",")
+		discordCh = gateway.NewDiscordChannel(discordToken, allowedUsers,
+			gateway.WithDiscordChannelGateway(gw),
+		)
+		if err := gw.Register(discordCh); err != nil {
+			log.Printf("[engram-cloud] WARN: failed to register discord channel: %v", err)
+		} else {
+			log.Println("[engram-cloud] Discord channel registered (JARVIS_DISCORD_ENABLED=true)")
+		}
+	} else if discordEnabled && discordToken == "" {
+		log.Println("[engram-cloud] WARN: JARVIS_DISCORD_ENABLED=true but DISCORD_BOT_TOKEN is empty — Discord channel not started")
+	}
+
+	// Start Gateway (starts all registered channels).
+	if err := gw.Start(ctx); err != nil {
+		log.Printf("[engram-cloud] WARN: gateway start failed: %v", err)
+	}
+
 	opts := []cloudserver.Option{
 		cloudserver.WithDashboard(dashCfg),
 		cloudserver.WithDSN(cloudCfg.DSN),
 		cloudserver.WithJARVIS(orch),
 		cloudserver.WithJobs(jarvis.NewJobServiceAdapter(orch)),
+		cloudserver.WithGateway(gw),
+		cloudserver.WithWebChannel(webCh),
 	}
 
 	if notifier != nil {

@@ -125,6 +125,38 @@ func TestConvertMarkdown(t *testing.T) {
 			want:   "**bold** text",
 		},
 
+		// ── Discord format ───────────────────────────────────────────
+		{
+			name:   "discord headers to bold",
+			input:  "# Title\n## Subtitle",
+			format: FormatDiscord,
+			want:   "**Title**\n**Subtitle**",
+		},
+		{
+			name:   "discord preserves bold",
+			input:  "this is **bold** text",
+			format: FormatDiscord,
+			want:   "this is **bold** text",
+		},
+		{
+			name:   "discord preserves italic",
+			input:  "this is *italic* text",
+			format: FormatDiscord,
+			want:   "this is *italic* text",
+		},
+		{
+			name:   "discord preserves code blocks",
+			input:  "```go\nfmt.Println()\n```",
+			format: FormatDiscord,
+			want:   "```go\nfmt.Println()\n```",
+		},
+		{
+			name:   "discord tables to code blocks",
+			input:  "| A | B |\n| - | - |\n| 1 | 2 |",
+			format: FormatDiscord,
+			want:   "```\n| A | B |\n| - | - |\n| 1 | 2 |\n```",
+		},
+
 		// ── Unknown format ───────────────────────────────────────────
 		{
 			name:   "unknown format passthrough",
@@ -142,4 +174,80 @@ func TestConvertMarkdown(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSplitMessageBasic(t *testing.T) {
+	tests := []struct {
+		name       string
+		text       string
+		maxLen     int
+		wantChunks int
+	}{
+		{"empty", "", 100, 0},
+		{"fits", "hello", 100, 1},
+		{"exact", "12345", 5, 1},
+		{"split needed", "hello world foo bar", 10, 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chunks := SplitMessage(tt.text, tt.maxLen)
+			if len(chunks) != tt.wantChunks {
+				t.Errorf("SplitMessage(%q, %d) = %d chunks, want %d", tt.text, tt.maxLen, len(chunks), tt.wantChunks)
+			}
+		})
+	}
+}
+
+func TestSplitMessageAt2000Chars(t *testing.T) {
+	// Build a string just over 2000 chars.
+	line := "This is a line of text that is about fifty characters.\n"
+	text := ""
+	for len(text) < 2100 {
+		text += line
+	}
+
+	chunks := SplitMessage(text, DiscordMaxMessageLen)
+	if len(chunks) < 2 {
+		t.Fatalf("expected at least 2 chunks, got %d", len(chunks))
+	}
+	for i, chunk := range chunks {
+		if len(chunk) > DiscordMaxMessageLen+10 {
+			t.Errorf("chunk %d exceeds limit: %d", i, len(chunk))
+		}
+	}
+}
+
+func TestConvertTablesToCodeBlocks(t *testing.T) {
+	input := "text before\n| A | B |\n| - | - |\n| 1 | 2 |\ntext after"
+	got := convertTablesToCodeBlocks(input)
+
+	if got == input {
+		t.Fatal("expected table to be wrapped in code fences")
+	}
+	// Should contain opening and closing ```.
+	fenceCount := 0
+	for _, line := range splitLines(got) {
+		if line == "```" {
+			fenceCount++
+		}
+	}
+	if fenceCount != 2 {
+		t.Errorf("expected 2 code fences, got %d in:\n%s", fenceCount, got)
+	}
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
 }

@@ -48,6 +48,7 @@ const (
 	FormatMarkdown MessageFormat = iota // full markdown (web, telegram)
 	FormatPlain                         // plain text (voice, SMS)
 	FormatHTML                          // HTML (email)
+	FormatDiscord                       // Discord-compatible markdown (no headers, no tables, 2000 char limit)
 )
 
 // Attachment represents a file or media attachment.
