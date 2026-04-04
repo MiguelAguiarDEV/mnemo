@@ -755,9 +755,15 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 		})
 		onToken("__STATUS__" + string(statusJSON))
 
-		// If stop_reason is "end_turn", we're done
-		if resp.StopReason != "tool_use" {
-			// Persist total token usage
+		// Check for native tool_use blocks first (if bridge supports it)
+		hasNativeTools := resp.StopReason == "tool_use"
+		toolBlocks := resp.ToolUseBlocks()
+
+		// Check for text-based [TOOL:name] markers in Claude's response
+		textToolRequests := parseToolRequests(textContent)
+
+		if !hasNativeTools && len(textToolRequests) == 0 {
+			// No tools needed — return response as-is
 			modelName := resp.Model
 			if modelName == "" {
 				modelName = model.Model
@@ -769,75 +775,128 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 			return textContent, nil
 		}
 
-		// stop_reason == "tool_use": dispatch tools and continue the loop
-		toolBlocks := resp.ToolUseBlocks()
-		slog.Info("native tool_use detected",
-			"count", len(toolBlocks),
-			"iteration", i+1,
-		)
+		// ── Path A: Native tool_use blocks (bridge supports tools) ──────
+		if hasNativeTools && len(toolBlocks) > 0 {
+			slog.Info("native tool_use detected",
+				"count", len(toolBlocks),
+				"iteration", i+1,
+			)
 
-		// Add assistant's response (with tool_use blocks) to conversation
-		messages = append(messages, prometheus.NewBlocksMessage("assistant", resp.Content))
+			// Add assistant's response (with tool_use blocks) to conversation
+			messages = append(messages, prometheus.NewBlocksMessage("assistant", resp.Content))
 
-		// Execute each tool and build tool_result messages
-		var toolResultBlocks []prometheus.ContentBlock
-		for _, tb := range toolBlocks {
-			slog.Info("dispatching tool", "name", tb.Name, "id", tb.ID)
+			// Execute each tool and build tool_result messages
+			var toolResultBlocks []prometheus.ContentBlock
+			for _, tb := range toolBlocks {
+				slog.Info("dispatching tool", "name", tb.Name, "id", tb.ID)
 
-			// Emit tool_start status event.
-			toolStartJSON, _ := json.Marshal(map[string]any{
-				"event": "tool_start",
-				"tool":  tb.Name,
-			})
-			onToken("__STATUS__" + string(toolStartJSON))
+				toolStartJSON, _ := json.Marshal(map[string]any{
+					"event": "tool_start",
+					"tool":  tb.Name,
+				})
+				onToken("__STATUS__" + string(toolStartJSON))
 
-			toolStartTime := time.Now()
-			result, err := o.tracingDispatcher.Dispatch(context.Background(), tb.Name, tb.Input)
-			toolDuration := time.Since(toolStartTime).Milliseconds()
+				toolStartTime := time.Now()
+				result, dispErr := o.tracingDispatcher.Dispatch(context.Background(), tb.Name, tb.Input)
+				toolDuration := time.Since(toolStartTime).Milliseconds()
 
-			isError := false
-			content := ""
-			if err != nil {
-				isError = true
-				content = "tool error: " + err.Error()
-				slog.Error("tool dispatch error", "tool", tb.Name, "err", err)
-			} else if result.IsError {
-				isError = true
-				content = result.Content
-				slog.Warn("tool returned error", "tool", tb.Name, "content", content)
-			} else {
-				content = result.Content
-				slog.Debug("tool result", "tool", tb.Name, "result_len", len(content))
+				isError := false
+				content := ""
+				if dispErr != nil {
+					isError = true
+					content = "tool error: " + dispErr.Error()
+					slog.Error("tool dispatch error", "tool", tb.Name, "err", dispErr)
+				} else if result.IsError {
+					isError = true
+					content = result.Content
+					slog.Warn("tool returned error", "tool", tb.Name, "content", content)
+				} else {
+					content = truncateResult(result.Content)
+					slog.Debug("tool result", "tool", tb.Name, "result_len", len(content))
+				}
+
+				toolDoneJSON, _ := json.Marshal(map[string]any{
+					"event":       "tool_done",
+					"tool":        tb.Name,
+					"duration_ms": toolDuration,
+					"is_error":    isError,
+				})
+				onToken("__STATUS__" + string(toolDoneJSON))
+
+				toolResultBlocks = append(toolResultBlocks, prometheus.ContentBlock{
+					Type:      "tool_result",
+					ToolUseID: tb.ID,
+					Content:   content,
+					IsError:   isError,
+				})
 			}
 
-			// Emit tool_done status event.
-			toolDoneJSON, _ := json.Marshal(map[string]any{
-				"event":       "tool_done",
-				"tool":        tb.Name,
-				"duration_ms": toolDuration,
-				"is_error":    isError,
-			})
-			onToken("__STATUS__" + string(toolDoneJSON))
-
-			toolResultBlocks = append(toolResultBlocks, prometheus.ContentBlock{
-				Type:      "tool_result",
-				ToolUseID: tb.ID,
-				Content:   content,
-				IsError:   isError,
+			toolResultContent, _ := json.Marshal(toolResultBlocks)
+			messages = append(messages, prometheus.ChatMessage{
+				Role:    "user",
+				Content: toolResultContent,
 			})
 		}
 
-		// Add all tool results as a single user message
-		toolResultContent, _ := json.Marshal(toolResultBlocks)
-		messages = append(messages, prometheus.ChatMessage{
-			Role:    "user",
-			Content: toolResultContent,
-		})
+		// ── Path B: Text-based [TOOL:name] markers ──────────────────────
+		if len(textToolRequests) > 0 {
+			slog.Info("text-based tool requests detected",
+				"count", len(textToolRequests),
+				"iteration", i+1,
+			)
 
-		// If this is the last iteration, log a warning
+			// Add assistant's text response to conversation
+			messages = append(messages, prometheus.NewTextMessage("assistant", textContent))
+
+			// Execute each tool and collect results
+			var resultParts []string
+			for _, tr := range textToolRequests {
+				slog.Info("dispatching text tool", "name", tr.Name)
+
+				toolStartJSON, _ := json.Marshal(map[string]any{
+					"event": "tool_start",
+					"tool":  tr.Name,
+				})
+				onToken("__STATUS__" + string(toolStartJSON))
+
+				toolStartTime := time.Now()
+				result, dispErr := o.tracingDispatcher.Dispatch(context.Background(), tr.Name, tr.Params)
+				toolDuration := time.Since(toolStartTime).Milliseconds()
+
+				isError := false
+				content := ""
+				if dispErr != nil {
+					isError = true
+					content = "ERROR: " + dispErr.Error()
+					slog.Error("text tool dispatch error", "tool", tr.Name, "err", dispErr)
+				} else if result.IsError {
+					isError = true
+					content = "ERROR: " + result.Content
+					slog.Warn("text tool returned error", "tool", tr.Name, "content", content)
+				} else {
+					content = truncateResult(result.Content)
+					slog.Info("text tool result", "tool", tr.Name, "result_len", len(content))
+				}
+
+				toolDoneJSON, _ := json.Marshal(map[string]any{
+					"event":       "tool_done",
+					"tool":        tr.Name,
+					"duration_ms": toolDuration,
+					"is_error":    isError,
+				})
+				onToken("__STATUS__" + string(toolDoneJSON))
+
+				resultParts = append(resultParts, fmt.Sprintf("[RESULT:%s] %s", tr.Name, content))
+			}
+
+			// Send tool results back to Claude as a user message
+			toolResultsText := "Tool results:\n" + strings.Join(resultParts, "\n\n")
+			messages = append(messages, prometheus.NewTextMessage("user", toolResultsText))
+		}
+
+		// If this is the last iteration, log a warning and return what we have
 		if i == maxIterations-1 {
 			slog.Warn("tool-call loop reached max iterations", "max", maxIterations)
-			// Persist what we have
 			modelName := resp.Model
 			cost := (float64(totalInputTokens) / 1000.0 * model.CostPer1KIn) +
 				(float64(totalOutputTokens) / 1000.0 * model.CostPer1KOut)
@@ -847,6 +906,101 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 	}
 
 	return "", fmt.Errorf("jarvis: tool-call loop exhausted without final response")
+}
+
+// ─── Text-Based Tool Parsing ─────────────────────────────────────────────
+
+// ToolRequest represents a tool call parsed from Claude's text response.
+type ToolRequest struct {
+	Name   string
+	Params json.RawMessage
+}
+
+// toolRequestRe matches [TOOL:tool_name] followed by a JSON object.
+// The JSON object may span multiple lines.
+var toolRequestRe = regexp.MustCompile(`(?m)^\[TOOL:([a-z_]+)\]\s*(\{.*)`)
+
+// parseToolRequests extracts [TOOL:name] {"params"} patterns from text.
+// It handles multi-line JSON by finding the balanced closing brace.
+func parseToolRequests(text string) []ToolRequest {
+	var requests []ToolRequest
+
+	matches := toolRequestRe.FindAllStringSubmatchIndex(text, -1)
+	for _, loc := range matches {
+		name := text[loc[2]:loc[3]]
+		jsonStart := loc[4] // start of the JSON portion
+
+		// Find balanced closing brace for multi-line JSON
+		jsonStr := extractJSON(text[jsonStart:])
+		if jsonStr == "" {
+			slog.Warn("parseToolRequests: could not extract JSON", "tool", name)
+			continue
+		}
+
+		// Validate it's actually JSON
+		var raw json.RawMessage
+		if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+			slog.Warn("parseToolRequests: invalid JSON", "tool", name, "err", err)
+			continue
+		}
+
+		requests = append(requests, ToolRequest{
+			Name:   name,
+			Params: raw,
+		})
+	}
+
+	return requests
+}
+
+// extractJSON finds the balanced JSON object starting from the first '{'.
+func extractJSON(s string) string {
+	if len(s) == 0 || s[0] != '{' {
+		return ""
+	}
+
+	depth := 0
+	inString := false
+	escaped := false
+
+	for i, ch := range s {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escaped = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '{' {
+			depth++
+		} else if ch == '}' {
+			depth--
+			if depth == 0 {
+				return s[:i+1]
+			}
+		}
+	}
+
+	return "" // unbalanced
+}
+
+// maxToolResultSize is the maximum size of a tool result before truncation.
+const maxToolResultSize = 10 * 1024 // 10 KB
+
+// truncateResult truncates a tool result to maxToolResultSize.
+func truncateResult(s string) string {
+	if len(s) <= maxToolResultSize {
+		return s
+	}
+	return s[:maxToolResultSize] + "\n... (truncated)"
 }
 
 // ─── Quick / Long Chat Modes ──────────────────────────────────────────────

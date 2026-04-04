@@ -282,6 +282,122 @@ func TestToolCallLoop_LoggingAtEachStep(t *testing.T) {
 	}
 }
 
+// ─── parseToolRequests Tests ─────────────────────────────────────────────────
+
+func TestParseToolRequests_SingleTool(t *testing.T) {
+	text := `Let me check that for you.
+[TOOL:bash] {"command":"docker ps"}
+I'll show you the results.`
+
+	reqs := parseToolRequests(text)
+	if len(reqs) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(reqs))
+	}
+	if reqs[0].Name != "bash" {
+		t.Errorf("name = %q, want %q", reqs[0].Name, "bash")
+	}
+
+	var params map[string]string
+	json.Unmarshal(reqs[0].Params, &params)
+	if params["command"] != "docker ps" {
+		t.Errorf("command = %q, want %q", params["command"], "docker ps")
+	}
+}
+
+func TestParseToolRequests_MultipleTools(t *testing.T) {
+	text := `I'll check a few things.
+[TOOL:bash] {"command":"uptime"}
+[TOOL:read_file] {"path":"/tmp/test.txt"}
+Done.`
+
+	reqs := parseToolRequests(text)
+	if len(reqs) != 2 {
+		t.Fatalf("expected 2 requests, got %d", len(reqs))
+	}
+	if reqs[0].Name != "bash" {
+		t.Errorf("first name = %q, want %q", reqs[0].Name, "bash")
+	}
+	if reqs[1].Name != "read_file" {
+		t.Errorf("second name = %q, want %q", reqs[1].Name, "read_file")
+	}
+}
+
+func TestParseToolRequests_NoTools(t *testing.T) {
+	text := "Here is your answer with no tool calls."
+	reqs := parseToolRequests(text)
+	if len(reqs) != 0 {
+		t.Errorf("expected 0 requests, got %d", len(reqs))
+	}
+}
+
+func TestParseToolRequests_InvalidJSON(t *testing.T) {
+	text := `[TOOL:bash] {not valid json}`
+	reqs := parseToolRequests(text)
+	if len(reqs) != 0 {
+		t.Errorf("expected 0 requests for invalid JSON, got %d", len(reqs))
+	}
+}
+
+func TestParseToolRequests_NestedJSON(t *testing.T) {
+	text := `[TOOL:write_file] {"path":"/tmp/config.json","content":"{\"key\":\"value\"}"}`
+	reqs := parseToolRequests(text)
+	if len(reqs) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(reqs))
+	}
+	if reqs[0].Name != "write_file" {
+		t.Errorf("name = %q, want %q", reqs[0].Name, "write_file")
+	}
+}
+
+func TestParseToolRequests_NotAtLineStart(t *testing.T) {
+	// [TOOL:bash] must be at the start of a line
+	text := `some prefix [TOOL:bash] {"command":"ls"}`
+	reqs := parseToolRequests(text)
+	if len(reqs) != 0 {
+		t.Errorf("expected 0 requests when not at line start, got %d", len(reqs))
+	}
+}
+
+func TestExtractJSON_Balanced(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"simple", `{"a":"b"}`, `{"a":"b"}`},
+		{"nested", `{"a":{"b":"c"}}`, `{"a":{"b":"c"}}`},
+		{"with trailing", `{"a":"b"} extra`, `{"a":"b"}`},
+		{"escaped quotes", `{"a":"he said \"hi\""}`, `{"a":"he said \"hi\""}`},
+		{"empty", "", ""},
+		{"unbalanced", `{"a":"b"`, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractJSON(tt.input)
+			if got != tt.want {
+				t.Errorf("extractJSON(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTruncateResult(t *testing.T) {
+	short := "hello"
+	if truncateResult(short) != short {
+		t.Error("should not truncate short strings")
+	}
+
+	long := strings.Repeat("x", 11*1024)
+	truncated := truncateResult(long)
+	if len(truncated) > maxToolResultSize+20 {
+		t.Errorf("truncated result too long: %d", len(truncated))
+	}
+	if !strings.HasSuffix(truncated, "... (truncated)") {
+		t.Error("truncated result should end with truncation marker")
+	}
+}
+
 // ─── Mock Tool ───────────────────────────────────────────────────────────────
 
 type mockTool struct {
