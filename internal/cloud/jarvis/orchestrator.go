@@ -132,7 +132,7 @@ func New(cfg OrchestratorConfig) *Orchestrator {
 		openCodePassword: password,
 		budgetClaude:     claudeBudget,
 		budgetOpenAI:     openAIBudget,
-		client:           &http.Client{Timeout: 5 * time.Minute},
+		client:           &http.Client{Timeout: 15 * time.Minute},
 		logger:           logger,
 	}
 
