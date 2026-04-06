@@ -731,7 +731,7 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 			// tool_use JSON from Claude's text response and dispatches locally.
 			Model:     model.Model,
 			MaxTokens: model.MaxTokens,
-			MaxTurns:  50,
+			MaxTurns:  100,
 		})
 		if err != nil {
 			return "", fmt.Errorf("jarvis: claude API (iteration %d): %w", i, err)
@@ -1054,7 +1054,7 @@ func (o *Orchestrator) ChatQuick(userID string, conversationID int64, message st
 		Messages:     messages,
 		Model:        model.Model,
 		MaxTokens:    model.MaxTokens,
-		MaxTurns:     50,
+		MaxTurns:     100,
 	})
 	if err != nil {
 		return QuickResponse{}, fmt.Errorf("jarvis: quick chat: %w", err)
@@ -1149,7 +1149,7 @@ func (o *Orchestrator) ChatLong(ctx context.Context, userID string, conversation
 			Messages:     messages,
 			Model:        model.Model,
 			MaxTokens:    model.MaxTokens,
-			MaxTurns:     50,
+			MaxTurns:     100,
 		})
 		if err != nil {
 			return lastText, fmt.Errorf("jarvis: claude API (long iteration %d): %w", i, err)
