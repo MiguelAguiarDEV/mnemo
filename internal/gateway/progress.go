@@ -249,14 +249,6 @@ func (p *ProgressReporter) Finalize(ctx context.Context, text string) error {
 	responseText := ConvertMarkdown(text, FormatDiscord)
 	summary := toolSummary.String()
 
-	// Decide whether to split or combine.
-	combined := ""
-	if summary != "" {
-		combined = summary + "\n" + responseText
-	} else {
-		combined = responseText
-	}
-
 	// Update the original "thinking" message with the tool summary (so user sees what was done),
 	// then send the actual response as a NEW message so Discord notifies the user.
 	if summary != "" {
