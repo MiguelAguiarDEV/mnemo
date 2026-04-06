@@ -6,6 +6,7 @@
 package prometheus
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -437,4 +439,236 @@ func NewChatToolDef(name, description string, inputSchema json.RawMessage) ChatT
 		Description: description,
 		InputSchema: inputSchema,
 	}
+}
+
+// ─── SSE Streaming ───────────────────────────────────────────────────────────
+
+// SSEEventHandler is invoked for each SSE event received from the bridge.
+// event is the SSE event name (text|tool_start|tool_result|done|error).
+// data is the raw JSON payload of the event.
+type SSEEventHandler func(event string, data json.RawMessage) error
+
+// sseDoneEvent is the payload of the "done" SSE event.
+type sseDoneEvent struct {
+	Text  string    `json:"text"`
+	Usage ChatUsage `json:"usage"`
+	Cost  float64   `json:"cost"`
+	Model string    `json:"model"`
+}
+
+// sseTextEvent is the payload of the "text" SSE event.
+type sseTextEvent struct {
+	Text string `json:"text"`
+}
+
+// SendStreaming sends a request to the bridge with Accept: text/event-stream
+// and parses the SSE stream. It invokes onEvent for each event and returns the
+// final ChatResponse assembled from accumulated text events plus the "done"
+// event payload.
+//
+// Use this when you need real-time tool_use / tool_result notifications. For
+// non-streaming use cases, prefer Send.
+func (c *ClaudeClient) SendStreaming(ctx context.Context, req ChatRequest, onEvent SSEEventHandler) (*ChatResponse, error) {
+	token, err := c.getToken()
+	if err != nil {
+		return nil, fmt.Errorf("get token: %w", err)
+	}
+
+	maxTokens := req.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = defaultMaxTokens
+	}
+
+	model := req.Model
+	if model == "" {
+		model = "claude-opus-4-6"
+	}
+
+	apiReq := apiRequest{
+		Model:     model,
+		MaxTokens: maxTokens,
+		MaxTurns:  req.MaxTurns,
+		Messages:  req.Messages,
+		Tools:     req.Tools,
+	}
+
+	if req.SystemPrompt != "" {
+		apiReq.System = []apiTextBlock{
+			{Type: "text", Text: req.SystemPrompt},
+		}
+	}
+
+	body, err := json.Marshal(apiReq)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	c.logger.Debug("sending claude API streaming request",
+		"model", model,
+		"messages", len(req.Messages),
+		"tools", len(req.Tools),
+		"body_size", len(body),
+	)
+
+	apiURL := claudeAPIURL + "?beta=true"
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	httpReq.Header.Set("content-type", "application/json")
+	httpReq.Header.Set("authorization", "Bearer "+token)
+	httpReq.Header.Set("anthropic-version", claudeAPIVersion)
+	httpReq.Header.Set("anthropic-beta", claudeBetaHeaders)
+	httpReq.Header.Set("user-agent", claudeUserAgent)
+	httpReq.Header.Set("accept", "text/event-stream")
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("API request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		// Rate limit fallback
+		if resp.StatusCode == http.StatusTooManyRequests {
+			fallbacks := map[string]string{
+				"claude-opus-4-6":   "claude-sonnet-4-6",
+				"claude-sonnet-4-6": "claude-haiku-4-5-20251001",
+			}
+			if next, ok := fallbacks[model]; ok {
+				c.logger.Warn("rate limited (sse), falling back",
+					"original_model", model,
+					"fallback_model", next,
+				)
+				req.Model = next
+				return c.SendStreaming(ctx, req, onEvent)
+			}
+		}
+		var apiErr apiError
+		if json.Unmarshal(respBody, &apiErr) == nil && apiErr.Error.Message != "" {
+			return nil, fmt.Errorf("claude API error (%d): %s: %s",
+				resp.StatusCode, apiErr.Error.Type, apiErr.Error.Message)
+		}
+		return nil, fmt.Errorf("claude API error (%d): %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse SSE stream
+	scanner := bufio.NewScanner(resp.Body)
+	// 1MB max line buffer (some tool results can be large)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	var (
+		curEvent     string
+		curDataLines []string
+		accumText    strings.Builder
+		finalUsage   ChatUsage
+		finalModel   string
+		gotDone      bool
+	)
+
+	flushEvent := func() {
+		if curEvent == "" && len(curDataLines) == 0 {
+			return
+		}
+		dataStr := strings.Join(curDataLines, "\n")
+		curDataLines = curDataLines[:0]
+		ev := curEvent
+		curEvent = ""
+		if dataStr == "" {
+			return
+		}
+		raw := json.RawMessage(dataStr)
+
+		c.logger.Debug("sse event", "event", ev, "size", len(dataStr))
+
+		switch ev {
+		case "text":
+			var t sseTextEvent
+			if err := json.Unmarshal(raw, &t); err != nil {
+				c.logger.Warn("sse: parse text event failed", "err", err)
+			} else {
+				accumText.WriteString(t.Text)
+			}
+		case "done":
+			var d sseDoneEvent
+			if err := json.Unmarshal(raw, &d); err != nil {
+				c.logger.Warn("sse: parse done event failed", "err", err)
+			} else {
+				finalUsage = d.Usage
+				finalModel = d.Model
+				if d.Text != "" && accumText.Len() == 0 {
+					// Bridge may also send full text in done payload as fallback
+					accumText.WriteString(d.Text)
+				}
+				gotDone = true
+			}
+		}
+
+		// Forward all events (including text/done) to the handler so callers
+		// can react in real time. Errors from handler are logged but
+		// non-fatal — we keep streaming.
+		if onEvent != nil {
+			if err := onEvent(ev, raw); err != nil {
+				c.logger.Warn("sse: handler error", "event", ev, "err", err)
+			}
+		}
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Empty line = end of event
+		if line == "" {
+			flushEvent()
+			continue
+		}
+
+		if strings.HasPrefix(line, "event:") {
+			curEvent = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+			continue
+		}
+		if strings.HasPrefix(line, "data:") {
+			curDataLines = append(curDataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+			continue
+		}
+		if strings.HasPrefix(line, ":") {
+			// SSE comment, ignore
+			continue
+		}
+		c.logger.Debug("sse: unrecognized line", "line", line)
+	}
+	// Flush any trailing event
+	flushEvent()
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("sse read: %w", err)
+	}
+
+	if !gotDone {
+		c.logger.Warn("sse stream ended without done event",
+			"text_len", accumText.Len(),
+		)
+	}
+
+	if finalModel == "" {
+		finalModel = model
+	}
+
+	c.logger.Info("claude API sse response",
+		"model", finalModel,
+		"input_tokens", finalUsage.InputTokens,
+		"output_tokens", finalUsage.OutputTokens,
+		"text_len", accumText.Len(),
+	)
+
+	return &ChatResponse{
+		Content: []ContentBlock{
+			{Type: "text", Text: accumText.String()},
+		},
+		StopReason: "end_turn",
+		Usage:      finalUsage,
+		Model:      finalModel,
+	}, nil
 }

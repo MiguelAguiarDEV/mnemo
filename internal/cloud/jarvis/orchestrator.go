@@ -136,9 +136,21 @@ func New(cfg OrchestratorConfig) *Orchestrator {
 		logger:           logger,
 	}
 
-	// Initialize direct Claude API client (PROMETHEUS v2) — must be before initAsyncDelegation
+	// Initialize direct Claude API client (PROMETHEUS v2) — must be before initAsyncDelegation.
+	// Use a 15-minute timeout because the SSE bridge can hold the connection
+	// open for several minutes while Claude executes tools.
+	claudeTransport := &http.Transport{
+		DisableKeepAlives:   false,
+		MaxIdleConns:        10,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
 	o.claudeClient = prometheus.NewClaudeClient(
 		prometheus.WithLogger(logger),
+		prometheus.WithHTTPClient(&http.Client{
+			Timeout:   15 * time.Minute,
+			Transport: claudeTransport,
+		}),
 	)
 
 	// Initialize async delegation (Tasks 27-29)
@@ -723,7 +735,60 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 	var totalInputTokens, totalOutputTokens int
 
 	for i := 0; i < maxIterations; i++ {
-		resp, err := o.claudeClient.Send(context.Background(), prometheus.ChatRequest{
+		// Per-request map: tool_use_id → tool name. The bridge already includes
+		// the tool name in tool_result events, but we keep this as a fallback in
+		// case the bridge sends only the id.
+		toolNameByID := map[string]string{}
+
+		eventHandler := func(event string, data json.RawMessage) error {
+			switch event {
+			case "tool_start":
+				var d struct {
+					ID    string          `json:"id"`
+					Tool  string          `json:"tool"`
+					Input json.RawMessage `json:"input"`
+				}
+				if err := json.Unmarshal(data, &d); err != nil {
+					slog.Warn("sse tool_start parse failed", "err", err)
+					return nil
+				}
+				toolNameByID[d.ID] = d.Tool
+				statusJSON, _ := json.Marshal(map[string]any{
+					"event": "tool_start",
+					"tool":  d.Tool,
+				})
+				onToken("__STATUS__" + string(statusJSON))
+				slog.Debug("sse tool_start forwarded", "tool", d.Tool, "id", d.ID)
+
+			case "tool_result":
+				var d struct {
+					ToolUseID string `json:"tool_use_id"`
+					Tool      string `json:"tool"`
+					IsError   bool   `json:"is_error"`
+				}
+				if err := json.Unmarshal(data, &d); err != nil {
+					slog.Warn("sse tool_result parse failed", "err", err)
+					return nil
+				}
+				toolName := d.Tool
+				if toolName == "" {
+					toolName = toolNameByID[d.ToolUseID]
+				}
+				statusJSON, _ := json.Marshal(map[string]any{
+					"event":    "tool_done",
+					"tool":     toolName,
+					"is_error": d.IsError,
+				})
+				onToken("__STATUS__" + string(statusJSON))
+				slog.Debug("sse tool_result forwarded", "tool", toolName, "is_error", d.IsError)
+
+			case "text", "done", "error":
+				// text accumulation handled inside SendStreaming; nothing to do here
+			}
+			return nil
+		}
+
+		resp, err := o.claudeClient.SendStreaming(context.Background(), prometheus.ChatRequest{
 			SystemPrompt: systemPrompt,
 			Messages:     messages,
 			// NOTE: Tools are NOT sent to the bridge. The bridge only handles text.
@@ -732,7 +797,7 @@ func (o *Orchestrator) chatV2(userID string, conversationID int64, message strin
 			Model:     model.Model,
 			MaxTokens: model.MaxTokens,
 			MaxTurns:  100,
-		})
+		}, eventHandler)
 		if err != nil {
 			return "", fmt.Errorf("jarvis: claude API (iteration %d): %w", i, err)
 		}
