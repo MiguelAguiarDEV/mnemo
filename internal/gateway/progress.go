@@ -54,7 +54,7 @@ func NewProgressReporter(dc *DiscordChannel, channelID string, logger *slog.Logg
 
 // Start sends the initial "processing" message and saves its ID.
 func (p *ProgressReporter) Start(ctx context.Context) error {
-	msgID, err := p.discord.SendInitial(ctx, p.channelID, "\U0001f504 Procesando...")
+	msgID, err := p.discord.SendInitial(ctx, p.channelID, "\U0001f9e0 Thinking... (te notificaré cuando termine)")
 	if err != nil {
 		return fmt.Errorf("progress: start: %w", err)
 	}
@@ -257,22 +257,20 @@ func (p *ProgressReporter) Finalize(ctx context.Context, text string) error {
 		combined = responseText
 	}
 
-	if len(combined) <= progressSplitThreshold {
-		// Everything fits in one message — edit the original.
-		if err := p.discord.EditMessage(ctx, channelID, messageID, combined); err != nil {
-			return fmt.Errorf("progress: finalize edit: %w", err)
-		}
-		return nil
-	}
-
-	// Too long — put tool summary in original message, send response as new message(s).
+	// Update the original "thinking" message with the tool summary (so user sees what was done),
+	// then send the actual response as a NEW message so Discord notifies the user.
 	if summary != "" {
-		if err := p.discord.EditMessage(ctx, channelID, messageID, summary); err != nil {
+		if err := p.discord.EditMessage(ctx, channelID, messageID, "\u2705 "+summary); err != nil {
 			p.logger.Warn("progress: finalize summary edit failed", "error", err)
 		}
+	} else {
+		// No tools used — just mark the thinking message as done.
+		if err := p.discord.EditMessage(ctx, channelID, messageID, "\u2705 Done"); err != nil {
+			p.logger.Warn("progress: finalize done edit failed", "error", err)
+		}
 	}
 
-	// Send response text as new message(s), split if needed.
+	// Send response text as NEW message(s) — triggers Discord notification.
 	chunks := SplitMessage(responseText, DiscordMaxMessageLen)
 	for i, chunk := range chunks {
 		if _, err := p.discord.SendInitial(ctx, channelID, chunk); err != nil {
