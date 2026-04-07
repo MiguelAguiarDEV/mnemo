@@ -32,9 +32,11 @@ var defaultIntents = []intentRoute{
 	{
 		name: "usage",
 		regexes: []*regexp.Regexp{
-			mustRegex(`cuánto.{0,20}(me.{0,5})?queda`),
-			mustRegex(`cuanto.{0,20}(me.{0,5})?queda`),
+			mustRegex(`^/usage\??$`),
+			mustRegex(`cu[aá]nto.{0,20}(me.{0,5})?queda`),
 			mustRegex(`^uso\??$`),
+			mustRegex(`dime.{0,10}(el.{0,5})?uso`),
+			mustRegex(`(?:^|\s)uso(?:\s|$|\?|!|\.)`),
 			mustRegex(`^l[ií]mites?\??$`),
 			mustRegex(`rate.?limit`),
 			mustRegex(`claude.{0,20}(uso|l[ií]mite)`),
@@ -46,6 +48,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "health",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/health\??$`),
 			mustRegex(`^salud\??$`),
 			mustRegex(`^health\??$`),
 			mustRegex(`estado.{0,20}(del.{0,5})?(sistema|stack)`),
@@ -58,6 +61,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "tasks",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/tasks\??$`),
 			mustRegex(`^tareas\??$`),
 			mustRegex(`^tasks\??$`),
 			mustRegex(`lista.{0,10}tareas`),
@@ -70,6 +74,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "costs",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/costs\??$`),
 			mustRegex(`^cost[eo]s?\??$`),
 			mustRegex(`cu[aá]nto.{0,10}(he.{0,5})?gastado`),
 			mustRegex(`costo.{0,10}mensual`),
@@ -80,6 +85,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "services",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/services\??$`),
 			mustRegex(`^servicios\??$`),
 			mustRegex(`^services\??$`),
 			mustRegex(`^contenedores\??$`),
@@ -91,6 +97,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "stats",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/stats\??$`),
 			mustRegex(`^stats\??$`),
 			mustRegex(`^estad[ií]sticas\??$`),
 			mustRegex(`historial.{0,10}uso`),
@@ -100,6 +107,7 @@ var defaultIntents = []intentRoute{
 	{
 		name: "help",
 		regexes: []*regexp.Regexp{
+			mustRegex(`^/help\??$`),
 			mustRegex(`^ayuda\??$`),
 			mustRegex(`^help\??$`),
 			mustRegex(`qu[eé] puedes hacer`),
