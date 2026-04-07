@@ -220,6 +220,10 @@ func (s *CloudServer) routes() {
 	s.mux.HandleFunc("GET /api/costs/sessions", s.withAuth(s.handleCostSessions))
 	s.mux.HandleFunc("GET /api/costs/budget", s.withAuth(s.handleCostBudget))
 
+	// Claude Code usage tracking (subscription rate limits + local stats cache)
+	s.mux.HandleFunc("GET /api/usage/limits", s.withAuth(s.handleUsageLimits))
+	s.mux.HandleFunc("GET /api/usage/stats", s.withAuth(s.handleUsageStats))
+
 	// Activity feed (jarvis-mvp)
 	s.mux.HandleFunc("GET /api/activity", s.withAuth(s.handleActivity))
 
