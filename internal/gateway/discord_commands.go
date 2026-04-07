@@ -149,22 +149,85 @@ func (dc *DiscordChannel) handleInteraction(s *discordgo.Session, i *discordgo.I
 		"command", cmd.Name,
 	)
 
-	// Defer the response so we have up to 15 min to reply.
-	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-	}); err != nil {
-		dc.logger.Error("discord defer interaction failed", "command", cmd.Name, "error", err)
-		return
+	// Run the handler with a 2-second budget. If it returns in time, we respond
+	// directly (instant — no "JARVIS está pensando..." placeholder). If it
+	// takes longer, fall back to defer + followup. Most handlers run in <50ms.
+	type handlerResult struct {
+		text string
+		err  error
+	}
+	resultCh := make(chan handlerResult, 1)
+	startedAt := time.Now()
+	go func() {
+		text, herr := dc.dispatchSlashCommand(cmd)
+		resultCh <- handlerResult{text, herr}
+	}()
+
+	const fastBudget = 2500 * time.Millisecond
+
+	formatResult := func(r handlerResult) string {
+		out := r.text
+		if r.err != nil {
+			dc.logger.Error("discord slash command failed", "command", cmd.Name, "error", r.err)
+			out = "Error: " + r.err.Error()
+		}
+		if len(out) > 1900 {
+			out = out[:1900] + "\n... (truncated)"
+		}
+		if strings.TrimSpace(out) == "" {
+			out = "(empty response)"
+		}
+		return out
 	}
 
-	// Dispatch.
-	var result string
-	var err error
+	select {
+	case r := <-resultCh:
+		// FAST PATH: handler finished within budget. Respond directly.
+		result := formatResult(r)
+		if respErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: result},
+		}); respErr != nil {
+			dc.logger.Error("discord interaction respond failed",
+				"command", cmd.Name,
+				"elapsed_ms", time.Since(startedAt).Milliseconds(),
+				"error", respErr,
+			)
+		}
+		return
+
+	case <-time.After(fastBudget):
+		// SLOW PATH: handler is taking too long. Defer the interaction.
+		if dErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		}); dErr != nil {
+			dc.logger.Error("discord defer interaction failed", "command", cmd.Name, "error", dErr)
+			return
+		}
+	}
+
+	// Wait for the slow handler to finish, then send a followup message.
+	r := <-resultCh
+	result := formatResult(r)
+	if _, ferr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: result,
+	}); ferr != nil {
+		dc.logger.Error("discord followup message failed",
+			"command", cmd.Name,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+			"error", ferr,
+		)
+	}
+}
+
+// dispatchSlashCommand routes a slash command to its handler.
+// Used by both the fast and slow paths in handleInteractionCreate.
+func (dc *DiscordChannel) dispatchSlashCommand(cmd discordgo.ApplicationCommandInteractionData) (string, error) {
 	switch cmd.Name {
 	case "health":
-		result, err = dc.cmdHealth()
+		return dc.cmdHealth()
 	case "usage":
-		result, err = dc.cmdUsage()
+		return dc.cmdUsage()
 	case "stats":
 		days := 7
 		for _, opt := range cmd.Options {
@@ -172,9 +235,9 @@ func (dc *DiscordChannel) handleInteraction(s *discordgo.Session, i *discordgo.I
 				days = int(opt.IntValue())
 			}
 		}
-		result, err = dc.cmdStats(days)
+		return dc.cmdStats(days)
 	case "costs":
-		result, err = dc.cmdCosts()
+		return dc.cmdCosts()
 	case "tasks":
 		status := ""
 		for _, opt := range cmd.Options {
@@ -182,7 +245,7 @@ func (dc *DiscordChannel) handleInteraction(s *discordgo.Session, i *discordgo.I
 				status = opt.StringValue()
 			}
 		}
-		result, err = dc.cmdTasks(status)
+		return dc.cmdTasks(status)
 	case "done":
 		var id int64
 		for _, opt := range cmd.Options {
@@ -190,9 +253,9 @@ func (dc *DiscordChannel) handleInteraction(s *discordgo.Session, i *discordgo.I
 				id = opt.IntValue()
 			}
 		}
-		result, err = dc.cmdDone(id)
+		return dc.cmdDone(id)
 	case "services":
-		result, err = dc.cmdServices()
+		return dc.cmdServices()
 	case "memory":
 		query := ""
 		for _, opt := range cmd.Options {
@@ -200,36 +263,11 @@ func (dc *DiscordChannel) handleInteraction(s *discordgo.Session, i *discordgo.I
 				query = opt.StringValue()
 			}
 		}
-		result, err = dc.cmdMemory(query)
+		return dc.cmdMemory(query)
 	case "help":
-		result = dc.cmdHelp()
+		return dc.cmdHelp(), nil
 	default:
-		result = "Unknown command."
-	}
-
-	if err != nil {
-		dc.logger.Error("discord slash command failed",
-			"command", cmd.Name,
-			"error", err,
-		)
-		result = "Error: " + err.Error()
-	}
-
-	// Discord messages cap at 2000 chars.
-	if len(result) > 1900 {
-		result = result[:1900] + "\n... (truncated)"
-	}
-	if strings.TrimSpace(result) == "" {
-		result = "(empty response)"
-	}
-
-	if _, ferr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-		Content: result,
-	}); ferr != nil {
-		dc.logger.Error("discord followup message failed",
-			"command", cmd.Name,
-			"error", ferr,
-		)
+		return "Unknown command.", nil
 	}
 }
 
