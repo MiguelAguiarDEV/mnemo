@@ -388,6 +388,38 @@ func (dc *DiscordChannel) onMessageCreate(s *discordgo.Session, m *discordgo.Mes
 		text = strings.TrimSpace(strings.ReplaceAll(text, "<@!"+s.State.User.ID+">", ""))
 	}
 
+	// Fast-path: check if the message matches a programmatic intent.
+	// If yes, run the handler directly and send the response — no LLM cost.
+	// Unmatched messages fall through to the normal Gateway/LLM path below.
+	if intent := dc.matchIntent(text); intent != nil {
+		go func() {
+			_ = s.ChannelTyping(m.ChannelID)
+			result, err := intent.handler(dc)
+			if err != nil {
+				dc.logger.Error("intent handler failed",
+					"intent", intent.name,
+					"user_id", m.Author.ID,
+					"error", err,
+				)
+				result = "Error: " + err.Error()
+			}
+			if len(result) > 1900 {
+				result = result[:1900] + "\n... (truncated)"
+			}
+			if strings.TrimSpace(result) == "" {
+				result = "(empty response)"
+			}
+			if _, sendErr := s.ChannelMessageSend(m.ChannelID, result); sendErr != nil {
+				dc.logger.Error("intent: send failed",
+					"intent", intent.name,
+					"channel_id", m.ChannelID,
+					"error", sendErr,
+				)
+			}
+		}()
+		return
+	}
+
 	// Build metadata.
 	metadata := map[string]string{
 		"channel_id": m.ChannelID,
