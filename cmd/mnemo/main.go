@@ -1346,6 +1346,9 @@ func cmdCloudServe() {
 			gateway.WithDiscordChannelGateway(gw),
 			gateway.WithDiscordConversationStore(cs),
 			gateway.WithDiscordDefaultUserID(jarvisOwnerUserID),
+			gateway.WithDiscordGuildID(os.Getenv("DISCORD_GUILD_ID")),
+			gateway.WithDiscordAthenaURL("http://localhost:8080"),
+			gateway.WithDiscordAPIKey(os.Getenv("MNEMO_API_KEY")),
 		)
 		if err := gw.Register(discordCh); err != nil {
 			log.Printf("[mnemo-cloud] WARN: failed to register discord channel: %v", err)

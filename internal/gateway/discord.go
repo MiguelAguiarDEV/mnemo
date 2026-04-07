@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +38,13 @@ type DiscordChannel struct {
 	defaultUserID string // JARVIS owner UUID used as SenderID in cloud_users
 	convMu        sync.Mutex
 	convMap       map[string]int64 // discord channelID → conversation ID
+
+	// Slash commands (fast-path actions hitting ATHENA directly).
+	guildID    string       // Discord guild ID for guild-scoped command registration
+	appID      string       // discovered from session.State.User.ID on Ready
+	athenaURL  string       // e.g. http://localhost:8080
+	apiKey     string       // MNEMO_API_KEY for /api/* endpoints
+	httpClient *http.Client // shared HTTP client for slash command handlers
 }
 
 // NewDiscordChannel creates a new DiscordChannel.
@@ -55,6 +63,7 @@ func NewDiscordChannel(botToken string, allowedUsers []string, opts ...DiscordCh
 		allowedUsers: allowed,
 		logger:       slog.Default(),
 		convMap:      make(map[string]int64),
+		httpClient:   &http.Client{Timeout: 10 * time.Second},
 	}
 	for _, opt := range opts {
 		opt(dc)
@@ -95,6 +104,31 @@ func WithDiscordConversationStore(cs ConversationStore) DiscordChannelOption {
 func WithDiscordDefaultUserID(userID string) DiscordChannelOption {
 	return func(dc *DiscordChannel) {
 		dc.defaultUserID = userID
+	}
+}
+
+// WithDiscordGuildID sets the guild ID for guild-scoped slash command
+// registration. Guild commands propagate instantly, unlike global commands
+// which can take up to 1 hour. If empty, commands register globally.
+func WithDiscordGuildID(id string) DiscordChannelOption {
+	return func(dc *DiscordChannel) {
+		dc.guildID = strings.TrimSpace(id)
+	}
+}
+
+// WithDiscordAthenaURL sets the ATHENA base URL used by slash command
+// handlers (e.g. "http://localhost:8080").
+func WithDiscordAthenaURL(url string) DiscordChannelOption {
+	return func(dc *DiscordChannel) {
+		dc.athenaURL = strings.TrimRight(strings.TrimSpace(url), "/")
+	}
+}
+
+// WithDiscordAPIKey sets the MNEMO_API_KEY used by slash command handlers
+// to authenticate against ATHENA /api/* endpoints.
+func WithDiscordAPIKey(key string) DiscordChannelOption {
+	return func(dc *DiscordChannel) {
+		dc.apiKey = strings.TrimSpace(key)
 	}
 }
 
@@ -139,15 +173,19 @@ func (dc *DiscordChannel) Start(ctx context.Context) error {
 		dc.session = dg
 	}
 
-	// Register message handler.
+	// Register message handler (free-form DMs via LLM).
 	dc.session.AddHandler(dc.onMessageCreate)
 
-	// Register ready handler.
+	// Register slash command interaction handler (fast-path actions).
+	dc.session.AddHandler(dc.handleInteraction)
+
+	// Register ready handler — registers slash commands as guild commands.
 	dc.session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		dc.logger.Info("discord connection established",
 			"bot_user", r.User.Username,
 			"bot_id", r.User.ID,
 		)
+		dc.registerSlashCommands(s)
 	})
 
 	if err := dc.session.Open(); err != nil {
