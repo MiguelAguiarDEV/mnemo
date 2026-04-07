@@ -4,11 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+// ConversationStore is the minimal interface DiscordChannel needs to
+// create conversations for incoming Discord DMs. The cloudstore.CloudStore
+// satisfies this via its CreateConversation method.
+type ConversationStore interface {
+	CreateConversation(userID string, title string) (int64, error)
+}
 
 // DiscordChannel implements the Channel and SendableChannel interfaces using
 // discordgo. It handles DMs and mentions, converting Discord messages to
@@ -22,6 +31,12 @@ type DiscordChannel struct {
 
 	mu      sync.RWMutex
 	started bool
+
+	// Conversation management (mirrors HERMES DMRouter behavior).
+	convStore     ConversationStore
+	defaultUserID string // JARVIS owner UUID used as SenderID in cloud_users
+	convMu        sync.Mutex
+	convMap       map[string]int64 // discord channelID → conversation ID
 }
 
 // NewDiscordChannel creates a new DiscordChannel.
@@ -39,6 +54,7 @@ func NewDiscordChannel(botToken string, allowedUsers []string, opts ...DiscordCh
 		botToken:     botToken,
 		allowedUsers: allowed,
 		logger:       slog.Default(),
+		convMap:      make(map[string]int64),
 	}
 	for _, opt := range opts {
 		opt(dc)
@@ -63,6 +79,22 @@ func WithDiscordChannelLogger(l *slog.Logger) DiscordChannelOption {
 func WithDiscordChannelGateway(gw *Gateway) DiscordChannelOption {
 	return func(dc *DiscordChannel) {
 		dc.gateway = gw
+	}
+}
+
+// WithDiscordConversationStore injects the conversation store used to
+// create new conversations when a Discord DM channel is seen for the first time.
+func WithDiscordConversationStore(cs ConversationStore) DiscordChannelOption {
+	return func(dc *DiscordChannel) {
+		dc.convStore = cs
+	}
+}
+
+// WithDiscordDefaultUserID sets the JARVIS owner UUID used as SenderID
+// for conversations originating from Discord. Required for cloud_users FK.
+func WithDiscordDefaultUserID(userID string) DiscordChannelOption {
+	return func(dc *DiscordChannel) {
+		dc.defaultUserID = userID
 	}
 }
 
@@ -318,9 +350,36 @@ func (dc *DiscordChannel) onMessageCreate(s *discordgo.Session, m *discordgo.Mes
 func (dc *DiscordChannel) processMessage(s *discordgo.Session, m *discordgo.MessageCreate, text string, metadata map[string]string) {
 	ctx := context.Background()
 
+	// Resolve (or create) the conversation for this Discord channel.
+	convID, err := dc.getOrCreateConversation(ctx, m.ChannelID)
+	if err != nil {
+		dc.logger.Error("discord get/create conversation failed",
+			"user_id", m.Author.ID,
+			"channel_id", m.ChannelID,
+			"error", err,
+		)
+		_, _ = s.ChannelMessageSend(m.ChannelID, "Something went wrong. Try again later.")
+		return
+	}
+
+	// Augment metadata: conversation_id (for orchestrator), discord_user_id
+	// (preserve the original author), and conversation_id always present.
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+	metadata["conversation_id"] = strconv.FormatInt(convID, 10)
+	metadata["discord_user_id"] = m.Author.ID
+
+	// SenderID must be the JARVIS owner UUID (cloud_users FK). Fall back
+	// to the Discord user ID if no default is configured (test mode).
+	senderID := dc.defaultUserID
+	if senderID == "" {
+		senderID = m.Author.ID
+	}
+
 	incoming := IncomingMessage{
 		ChannelName: "discord",
-		SenderID:    m.Author.ID,
+		SenderID:    senderID,
 		Text:        text,
 		ReplyTo:     m.ChannelID,
 		Metadata:    metadata,
@@ -395,6 +454,38 @@ func (dc *DiscordChannel) processMessageProgressive(ctx context.Context, incomin
 			"error", err,
 		)
 	}
+}
+
+// getOrCreateConversation returns the conversation ID for a Discord channel,
+// creating a new one in the cloudstore on first use. Mirrors the HERMES
+// DMRouter behavior to prevent foreign key violations on message insert.
+func (dc *DiscordChannel) getOrCreateConversation(ctx context.Context, channelID string) (int64, error) {
+	dc.convMu.Lock()
+	defer dc.convMu.Unlock()
+
+	if convID, ok := dc.convMap[channelID]; ok {
+		return convID, nil
+	}
+
+	if dc.convStore == nil {
+		return 0, fmt.Errorf("discord: no conversation store configured")
+	}
+	if dc.defaultUserID == "" {
+		return 0, fmt.Errorf("discord: no default user id configured")
+	}
+
+	title := fmt.Sprintf("Discord DM %s", time.Now().Format("2006-01-02 15:04"))
+	convID, err := dc.convStore.CreateConversation(dc.defaultUserID, title)
+	if err != nil {
+		return 0, fmt.Errorf("discord: create conversation: %w", err)
+	}
+
+	dc.convMap[channelID] = convID
+	dc.logger.Info("discord conversation created",
+		"channel_id", channelID,
+		"conversation_id", convID,
+	)
+	return convID, nil
 }
 
 // isBotMentioned checks if the bot is mentioned in the message.

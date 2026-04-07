@@ -1332,8 +1332,20 @@ func cmdCloudServe() {
 	var discordCh *gateway.DiscordChannel
 	if discordEnabled && discordToken != "" {
 		allowedUsers := strings.Split(discordUserIDs, ",")
+		// JARVIS owner UUID used as SenderID for Discord-originated messages
+		// (must exist in cloud_users). Read from env, fall back to the
+		// single-user hardcoded UUID used elsewhere in the orchestrator.
+		jarvisOwnerUserID := os.Getenv("JARVIS_OWNER_USER_ID")
+		if jarvisOwnerUserID == "" {
+			jarvisOwnerUserID = os.Getenv("MNEMO_OWNER_USER_ID")
+		}
+		if jarvisOwnerUserID == "" {
+			jarvisOwnerUserID = "2b8c5ccb-f82e-49f2-b8d7-9b9e7f4a4e03"
+		}
 		discordCh = gateway.NewDiscordChannel(discordToken, allowedUsers,
 			gateway.WithDiscordChannelGateway(gw),
+			gateway.WithDiscordConversationStore(cs),
+			gateway.WithDiscordDefaultUserID(jarvisOwnerUserID),
 		)
 		if err := gw.Register(discordCh); err != nil {
 			log.Printf("[mnemo-cloud] WARN: failed to register discord channel: %v", err)
