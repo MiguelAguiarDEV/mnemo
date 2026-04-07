@@ -249,21 +249,23 @@ func (p *ProgressReporter) Finalize(ctx context.Context, text string) error {
 	responseText := ConvertMarkdown(text, FormatDiscord)
 	summary := toolSummary.String()
 
-	// Update the original "thinking" message with the tool summary (so user sees what was done),
-	// then send the actual response as a NEW message so Discord notifies the user.
-	if summary != "" {
-		if err := p.discord.EditMessage(ctx, channelID, messageID, "\u2705 "+summary); err != nil {
-			p.logger.Warn("progress: finalize summary edit failed", "error", err)
-		}
-	} else {
-		// No tools used — just mark the thinking message as done.
-		if err := p.discord.EditMessage(ctx, channelID, messageID, "\u2705 Done"); err != nil {
-			p.logger.Warn("progress: finalize done edit failed", "error", err)
-		}
+	// Delete the "Thinking..." placeholder so the user only sees the final
+	// message(s). Sending NEW messages (instead of editing) ensures Discord
+	// fires a notification.
+	if err := p.discord.DeleteMessage(ctx, channelID, messageID); err != nil {
+		p.logger.Warn("progress: delete thinking message failed", "error", err)
 	}
 
-	// Send response text as NEW message(s) — triggers Discord notification.
-	chunks := SplitMessage(responseText, DiscordMaxMessageLen)
+	// Build final content: optional tool summary + response text.
+	var finalContent string
+	if summary != "" {
+		finalContent = "\u2705 " + summary + "\n" + responseText
+	} else {
+		finalContent = responseText
+	}
+
+	// Send as NEW message(s), splitting if needed.
+	chunks := SplitMessage(finalContent, DiscordMaxMessageLen)
 	for i, chunk := range chunks {
 		if _, err := p.discord.SendInitial(ctx, channelID, chunk); err != nil {
 			return fmt.Errorf("progress: finalize send chunk %d/%d: %w", i+1, len(chunks), err)

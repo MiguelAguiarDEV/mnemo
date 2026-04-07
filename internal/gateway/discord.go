@@ -255,6 +255,24 @@ func (dc *DiscordChannel) SendInitial(ctx context.Context, channelID, text strin
 	return msg.ID, nil
 }
 
+// DeleteMessage deletes an existing Discord message by ID.
+func (dc *DiscordChannel) DeleteMessage(ctx context.Context, channelID, messageID string) error {
+	dc.mu.RLock()
+	sess := dc.session
+	dc.mu.RUnlock()
+
+	if sess == nil {
+		return fmt.Errorf("discord: not connected")
+	}
+
+	if err := sess.ChannelMessageDelete(channelID, messageID); err != nil {
+		dc.logger.Error("discord delete failed", "channel_id", channelID, "message_id", messageID, "error", err)
+		return fmt.Errorf("discord: delete message: %w", err)
+	}
+	dc.logger.Debug("discord message deleted", "channel_id", channelID, "message_id", messageID)
+	return nil
+}
+
 // EditMessage edits an existing Discord message by ID.
 func (dc *DiscordChannel) EditMessage(ctx context.Context, channelID, messageID, text string) error {
 	dc.mu.RLock()

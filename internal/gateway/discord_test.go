@@ -312,24 +312,24 @@ func TestConvertToDiscordHeaders(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "h1 to bold",
+			name:  "h1 preserved",
 			input: "# Title",
-			want:  "**Title**",
+			want:  "# Title",
 		},
 		{
-			name:  "h2 to bold",
+			name:  "h2 preserved",
 			input: "## Subtitle",
-			want:  "**Subtitle**",
+			want:  "## Subtitle",
 		},
 		{
-			name:  "h3 to bold",
+			name:  "h3 preserved",
 			input: "### Section",
-			want:  "**Section**",
+			want:  "### Section",
 		},
 		{
-			name:  "multiple headers",
+			name:  "multiple headers preserved",
 			input: "# First\n## Second\nSome text",
-			want:  "**First**\n**Second**\nSome text",
+			want:  "# First\n## Second\nSome text",
 		},
 		{
 			name:  "no headers unchanged",
@@ -384,11 +384,8 @@ func TestConvertToDiscordPreservesCodeBlocks(t *testing.T) {
 func TestConvertMarkdownDiscordFormat(t *testing.T) {
 	input := "# Title\n\nSome **bold** text"
 	got := ConvertMarkdown(input, FormatDiscord)
-	if containsSubstring(got, "# ") {
-		t.Errorf("Discord format should not contain markdown headers: %q", got)
-	}
-	if !containsSubstring(got, "**Title**") {
-		t.Errorf("Headers should be converted to bold: %q", got)
+	if !containsSubstring(got, "# Title") {
+		t.Errorf("Discord format should preserve markdown headers: %q", got)
 	}
 	if !containsSubstring(got, "**bold**") {
 		t.Errorf("Bold should be preserved: %q", got)

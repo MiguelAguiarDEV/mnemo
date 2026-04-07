@@ -36,50 +36,197 @@ func ConvertMarkdown(text string, format MessageFormat) string {
 }
 
 // convertToDiscord transforms standard markdown into Discord-compatible markdown.
-// Discord supports bold, italic, code, code blocks, and blockquotes but NOT
-// headers or tables in messages.
+// Discord supports headers (#, ##, ###), bold, italic, code, code blocks,
+// blockquotes, and lists natively. Tables are converted to aligned code blocks.
+// Markdown links are flattened since Discord messages do not render them.
 func convertToDiscord(text string) string {
-	// Convert headers to bold: ## Title → **Title**
-	text = reHeader.ReplaceAllStringFunc(text, func(match string) string {
-		return "**"
-	})
-	// Close bold at end of header line.
-	text = reDiscordHeaderLine.ReplaceAllString(text, "**${1}**")
-
-	// Convert markdown tables to code blocks.
+	// Convert markdown tables to aligned code blocks (must run before link
+	// stripping so cell content is preserved as-is).
 	text = convertTablesToCodeBlocks(text)
+
+	// Flatten markdown links: [text](url) → text (url).
+	// Skip if inside a fenced code block — handled per-line below.
+	text = stripLinksOutsideCode(text)
 
 	return strings.TrimSpace(text)
 }
 
-// reDiscordHeaderLine matches a line that starts with ** (from header conversion)
-// followed by text until end of line, to wrap it fully in bold.
-var reDiscordHeaderLine = regexp.MustCompile(`(?m)^\*\*(.+)$`)
+// stripLinksOutsideCode replaces [text](url) with "text (url)" outside fenced
+// code blocks. Inline code (backticks) is left alone via the regex itself only
+// matching balanced bracket+paren forms.
+func stripLinksOutsideCode(text string) string {
+	lines := strings.Split(text, "\n")
+	inFence := false
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		lines[i] = reLinkCapture.ReplaceAllString(line, "$1 ($2)")
+	}
+	return strings.Join(lines, "\n")
+}
 
-// convertTablesToCodeBlocks wraps markdown table blocks in code fences.
+// convertTablesToCodeBlocks finds markdown tables and rewrites them as
+// fixed-width aligned plain-text tables wrapped in a code fence. Header
+// separator rows (| --- | --- |) are replaced with a single horizontal rule.
 func convertTablesToCodeBlocks(text string) string {
 	lines := strings.Split(text, "\n")
 	var result []string
-	inTable := false
+	var tableBlock []string
+	inFence := false
+
+	flush := func() {
+		if len(tableBlock) == 0 {
+			return
+		}
+		rendered := renderTable(tableBlock)
+		result = append(result, "```")
+		result = append(result, rendered...)
+		result = append(result, "```")
+		tableBlock = nil
+	}
 
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		isTableLine := strings.HasPrefix(trimmed, "|") && strings.HasSuffix(trimmed, "|")
-
-		if isTableLine && !inTable {
-			inTable = true
-			result = append(result, "```")
-		} else if !isTableLine && inTable {
-			inTable = false
-			result = append(result, "```")
+		// Track fenced code blocks so we don't accidentally treat code as table.
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			flush()
+			inFence = !inFence
+			result = append(result, line)
+			continue
 		}
+		if inFence {
+			result = append(result, line)
+			continue
+		}
+
+		trimmed := strings.TrimSpace(line)
+		isTableLine := strings.HasPrefix(trimmed, "|") && strings.HasSuffix(trimmed, "|") && len(trimmed) >= 2
+
+		if isTableLine {
+			tableBlock = append(tableBlock, trimmed)
+			continue
+		}
+		flush()
 		result = append(result, line)
 	}
-	if inTable {
-		result = append(result, "```")
-	}
+	flush()
 
 	return strings.Join(result, "\n")
+}
+
+// renderTable converts raw markdown table rows ("| a | b |") into a
+// fixed-width plain-text table with column alignment based on the longest
+// cell per column. The separator row ("| --- | --- |") becomes a horizontal
+// rule of box-drawing characters.
+func renderTable(rows []string) []string {
+	if len(rows) == 0 {
+		return nil
+	}
+
+	// Parse cells from each row.
+	parsed := make([][]string, 0, len(rows))
+	sepIndex := -1
+	for i, row := range rows {
+		cells := splitTableRow(row)
+		// Strip backticks around cell content for cleaner alignment.
+		for j, c := range cells {
+			cells[j] = strings.TrimSpace(strings.Trim(c, "`"))
+		}
+		if sepIndex == -1 && isSeparatorRow(cells) {
+			sepIndex = i
+		}
+		parsed = append(parsed, cells)
+	}
+
+	// Compute column widths (skip separator row from width calculation).
+	colCount := 0
+	for _, p := range parsed {
+		if len(p) > colCount {
+			colCount = len(p)
+		}
+	}
+	widths := make([]int, colCount)
+	for i, p := range parsed {
+		if i == sepIndex {
+			continue
+		}
+		for j, cell := range p {
+			if l := len([]rune(cell)); l > widths[j] {
+				widths[j] = l
+			}
+		}
+	}
+
+	// Render rows.
+	out := make([]string, 0, len(parsed))
+	for i, p := range parsed {
+		if i == sepIndex {
+			total := 0
+			for j, w := range widths {
+				total += w
+				if j < len(widths)-1 {
+					total += 2 // gap between columns
+				}
+			}
+			out = append(out, strings.Repeat("─", total))
+			continue
+		}
+		var sb strings.Builder
+		for j := 0; j < colCount; j++ {
+			cell := ""
+			if j < len(p) {
+				cell = p[j]
+			}
+			pad := widths[j] - len([]rune(cell))
+			if pad < 0 {
+				pad = 0
+			}
+			sb.WriteString(cell)
+			if j < colCount-1 {
+				sb.WriteString(strings.Repeat(" ", pad))
+				sb.WriteString("  ")
+			}
+		}
+		out = append(out, strings.TrimRight(sb.String(), " "))
+	}
+	return out
+}
+
+// splitTableRow splits a markdown table row "| a | b | c |" into ["a","b","c"].
+func splitTableRow(row string) []string {
+	row = strings.TrimSpace(row)
+	row = strings.TrimPrefix(row, "|")
+	row = strings.TrimSuffix(row, "|")
+	parts := strings.Split(row, "|")
+	for i, p := range parts {
+		parts[i] = strings.TrimSpace(p)
+	}
+	return parts
+}
+
+// isSeparatorRow returns true if every cell looks like ---, :---, ---:, :---:.
+func isSeparatorRow(cells []string) bool {
+	if len(cells) == 0 {
+		return false
+	}
+	for _, c := range cells {
+		c = strings.TrimSpace(c)
+		c = strings.TrimPrefix(c, ":")
+		c = strings.TrimSuffix(c, ":")
+		if c == "" {
+			return false
+		}
+		for _, r := range c {
+			if r != '-' {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // SplitMessage splits text into chunks that fit within maxLen characters.
@@ -202,6 +349,7 @@ var (
 	reStrikethrough     = regexp.MustCompile(`~~(.+?)~~`)
 	reHeader            = regexp.MustCompile(`(?m)^#{1,6}\s+`)
 	reLink              = regexp.MustCompile(`\[([^\]]+)\]\([^)]+\)`)
+	reLinkCapture       = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	reImage             = regexp.MustCompile(`!\[([^\]]*)\]\([^)]+\)`)
 	reBlockquote        = regexp.MustCompile(`(?m)^>\s?(.*)`)
 	reHR                = regexp.MustCompile(`(?m)^[-*_]{3,}\s*$`)

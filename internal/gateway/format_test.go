@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -127,10 +128,10 @@ func TestConvertMarkdown(t *testing.T) {
 
 		// ── Discord format ───────────────────────────────────────────
 		{
-			name:   "discord headers to bold",
-			input:  "# Title\n## Subtitle",
+			name:   "discord preserves headers",
+			input:  "# Title\n## Subtitle\n### Sub",
 			format: FormatDiscord,
-			want:   "**Title**\n**Subtitle**",
+			want:   "# Title\n## Subtitle\n### Sub",
 		},
 		{
 			name:   "discord preserves bold",
@@ -151,10 +152,40 @@ func TestConvertMarkdown(t *testing.T) {
 			want:   "```go\nfmt.Println()\n```",
 		},
 		{
-			name:   "discord tables to code blocks",
-			input:  "| A | B |\n| - | - |\n| 1 | 2 |",
+			name:   "discord preserves blockquotes",
+			input:  "> a quote\n> second line",
 			format: FormatDiscord,
-			want:   "```\n| A | B |\n| - | - |\n| 1 | 2 |\n```",
+			want:   "> a quote\n> second line",
+		},
+		{
+			name:   "discord preserves lists",
+			input:  "- item 1\n- item 2\n1. ordered",
+			format: FormatDiscord,
+			want:   "- item 1\n- item 2\n1. ordered",
+		},
+		{
+			name:   "discord strips markdown links",
+			input:  "visit [Google](https://google.com) now",
+			format: FormatDiscord,
+			want:   "visit Google (https://google.com) now",
+		},
+		{
+			name:   "discord preserves links inside code fence",
+			input:  "```\n[text](url)\n```",
+			format: FormatDiscord,
+			want:   "```\n[text](url)\n```",
+		},
+		{
+			name:   "discord tables to aligned code blocks",
+			input:  "| A | B |\n| - | - |\n| 1 | 22 |",
+			format: FormatDiscord,
+			want:   "```\nA  B\n─────\n1  22\n```",
+		},
+		{
+			name:   "discord table with longer cells",
+			input:  "| Contenedor | Estado |\n| --- | --- |\n| `jarvis-postgres` | ✅ healthy |\n| `jarvis-mnemo` | ✅ up |",
+			format: FormatDiscord,
+			want:   "```\nContenedor       Estado\n──────────────────────────\njarvis-postgres  ✅ healthy\njarvis-mnemo     ✅ up\n```",
 		},
 
 		// ── Unknown format ───────────────────────────────────────────
@@ -223,7 +254,7 @@ func TestConvertTablesToCodeBlocks(t *testing.T) {
 	got := convertTablesToCodeBlocks(input)
 
 	if got == input {
-		t.Fatal("expected table to be wrapped in code fences")
+		t.Fatal("expected table to be transformed")
 	}
 	// Should contain opening and closing ```.
 	fenceCount := 0
@@ -234,6 +265,12 @@ func TestConvertTablesToCodeBlocks(t *testing.T) {
 	}
 	if fenceCount != 2 {
 		t.Errorf("expected 2 code fences, got %d in:\n%s", fenceCount, got)
+	}
+	// Original markdown pipes should not survive inside the rendered table.
+	for _, line := range splitLines(got) {
+		if strings.Contains(line, "|") {
+			t.Errorf("unexpected pipe character in rendered table line: %q", line)
+		}
 	}
 }
 
