@@ -422,52 +422,53 @@ func (dc *DiscordChannel) cmdUsage() (string, error) {
 	_, _ = dc.apiGet("/api/usage/stats", &stats)
 
 	var sb strings.Builder
-	sb.WriteString("## Claude Usage\n\n")
+	sb.WriteString("```ansi\n")
+	sb.WriteString("\u001b[1;36m╔══ CLAUDE USAGE ══════════════════════════════╗\u001b[0m\n")
 
-	// A/B/C — Ventana actual
+	// Header line: rate limit status + window summary
+	if limits.RateLimit != nil {
+		statusIcon := "●"
+		statusColor := "\u001b[32m" // green
+		if limits.RateLimit.Status == "allowed_warning" {
+			statusColor = "\u001b[33m" // yellow
+		} else if limits.RateLimit.Status == "rejected" {
+			statusColor = "\u001b[31m" // red
+		}
+		rlType := limits.RateLimit.RateLimitType
+		if rlType == "" {
+			rlType = "?"
+		}
+		overage := ""
+		if limits.RateLimit.IsUsingOverage {
+			overage = " \u001b[33m⚠ overage\u001b[0m"
+		}
+		util := ""
+		if limits.RateLimit.Utilization > 0 {
+			util = fmt.Sprintf("  util %.0f%%", limits.RateLimit.Utilization*100)
+		}
+		sb.WriteString(fmt.Sprintf(" %s%s\u001b[0m %-7s  %s%s%s\n",
+			statusColor, statusIcon, limits.RateLimit.Status, rlType, util, overage))
+	}
+
+	// Window summary line: requests, tokens, cost, reset countdown
 	if limits.WindowUsage != nil && limits.WindowUsage.Requests > 0 {
 		wu := limits.WindowUsage
-		sb.WriteString("### Ventana actual (5h)\n")
-		sb.WriteString(fmt.Sprintf("**Requests:** `%d`\n", wu.Requests))
-		sb.WriteString(fmt.Sprintf("**Tokens totales:** `%s`\n", formatTokens(wu.TotalTokens)))
-		sb.WriteString(fmt.Sprintf("**Coste acumulado:** `$%.4f`\n", wu.TotalCostUSD))
+		resetStr := "—"
 		if wu.SecondsUntilReset > 0 {
-			hours := wu.SecondsUntilReset / 3600
-			mins := (wu.SecondsUntilReset % 3600) / 60
-			unix := parseISOToUnix(wu.ResetsAt)
-			if unix > 0 {
-				sb.WriteString(fmt.Sprintf("**Reset en:** `%dh %dm` (<t:%d:R>)\n", hours, mins, unix))
-			} else {
-				sb.WriteString(fmt.Sprintf("**Reset en:** `%dh %dm`\n", hours, mins))
-			}
+			h := wu.SecondsUntilReset / 3600
+			m := (wu.SecondsUntilReset % 3600) / 60
+			resetStr = fmt.Sprintf("%dh%dm", h, m)
 		}
-		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf(" \u001b[2mwindow:\u001b[0m %d req · %s tok · $%.4f · reset %s\n",
+			wu.Requests, formatTokens(wu.TotalTokens), wu.TotalCostUSD, resetStr))
 	} else {
-		sb.WriteString("_No window usage accumulated yet._\n\n")
+		sb.WriteString(" \u001b[2mwindow:\u001b[0m no usage yet\n")
 	}
 
-	// Rate limit info
-	if limits.RateLimit != nil {
-		sb.WriteString("### Rate limit\n")
-		sb.WriteString(fmt.Sprintf("**Status:** `%s`\n", limits.RateLimit.Status))
-		if limits.RateLimit.RateLimitType != "" {
-			sb.WriteString(fmt.Sprintf("**Tipo:** `%s`\n", limits.RateLimit.RateLimitType))
-		}
-		if limits.RateLimit.Utilization > 0 {
-			sb.WriteString(fmt.Sprintf("**Utilizacion:** `%.0f%%`\n", limits.RateLimit.Utilization*100))
-		}
-		if limits.RateLimit.IsUsingOverage {
-			sb.WriteString("**Usando overage**\n")
-		}
-		sb.WriteString("\n")
-	}
-
-	// F — Breakdown por modelo
+	// Per-model table (compact)
 	if limits.WindowUsage != nil && len(limits.WindowUsage.ByModel) > 0 {
-		sb.WriteString("### Por modelo\n```\n")
-		sb.WriteString(fmt.Sprintf("%-18s %5s %9s %10s\n", "Modelo", "Req", "Tokens", "Coste"))
-		sb.WriteString(strings.Repeat("-", 46) + "\n")
-		// Stable ordering by model name
+		sb.WriteString("\u001b[2m─── MODELS ────────────────────────────────────\u001b[0m\n")
+		sb.WriteString(fmt.Sprintf(" \u001b[2m%-12s %4s %8s %10s\u001b[0m\n", "model", "req", "tokens", "cost"))
 		models := make([]string, 0, len(limits.WindowUsage.ByModel))
 		for m := range limits.WindowUsage.ByModel {
 			models = append(models, m)
@@ -475,30 +476,30 @@ func (dc *DiscordChannel) cmdUsage() (string, error) {
 		sort.Strings(models)
 		for _, model := range models {
 			m := limits.WindowUsage.ByModel[model]
-			sb.WriteString(fmt.Sprintf("%-18s %5d %9s $%8.4f\n",
-				shortModelName(model), m.Requests, formatTokens(m.TotalTokens), m.CostUSD))
+			sb.WriteString(fmt.Sprintf(" %-12s %4d %8s %10s\n",
+				shortModelName(model), m.Requests, formatTokens(m.TotalTokens),
+				fmt.Sprintf("$%.4f", m.CostUSD)))
 		}
-		sb.WriteString("```\n\n")
 	}
 
-	// D — Historico reciente
+	// Daily history (last 7)
 	if stats.Available && len(stats.DailyActivity) > 0 {
-		sb.WriteString("### Historico reciente\n```\n")
-		sb.WriteString(fmt.Sprintf("%-10s %6s %6s\n", "fecha", "msgs", "sess"))
-		sb.WriteString(strings.Repeat("-", 26) + "\n")
+		sb.WriteString("\u001b[2m─── HISTORY ───────────────────────────────────\u001b[0m\n")
+		sb.WriteString(fmt.Sprintf(" \u001b[2m%-10s %6s %6s\u001b[0m\n", "date", "msgs", "sess"))
 		n := 7
 		if n > len(stats.DailyActivity) {
 			n = len(stats.DailyActivity)
 		}
 		for i := 0; i < n; i++ {
 			d := stats.DailyActivity[i]
-			sb.WriteString(fmt.Sprintf("%-10s %6d %6d\n", d.Date, d.MessageCount, d.SessionCount))
+			sb.WriteString(fmt.Sprintf(" %-10s %6d %6d\n", d.Date, d.MessageCount, d.SessionCount))
 		}
-		sb.WriteString("```\n")
-		sb.WriteString(fmt.Sprintf("**Total sesiones:** `%d`  **mensajes:** `%d`\n",
+		sb.WriteString(fmt.Sprintf(" \u001b[2mtotals: %d sessions · %d msgs\u001b[0m\n",
 			stats.TotalSessions, stats.TotalMessages))
 	}
 
+	sb.WriteString("\u001b[1;36m╚══════════════════════════════════════════════╝\u001b[0m\n")
+	sb.WriteString("```")
 	return sb.String(), nil
 }
 
