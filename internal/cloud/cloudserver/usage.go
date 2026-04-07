@@ -42,6 +42,7 @@ type usageLimitsResponse struct {
 	ModelUsageLastRequest        json.RawMessage `json:"model_usage_last_request"`
 	PermissionDenialsLastRequest json.RawMessage `json:"permission_denials_last_request"`
 	LastResultAt                 *string         `json:"last_result_at"`
+	WindowUsage                  json.RawMessage `json:"window_usage"`
 }
 
 func (s *CloudServer) handleUsageLimits(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +71,7 @@ func (s *CloudServer) handleUsageLimits(w http.ResponseWriter, r *http.Request) 
 			"rate_limit_seen_at":      nil,
 			"model_usage_last_request": nil,
 			"last_result_at":          nil,
+			"window_usage":            nil,
 			"bridge_available":        false,
 			"bridge_error":            err.Error(),
 		})
@@ -103,6 +105,7 @@ func (s *CloudServer) handleUsageLimits(w http.ResponseWriter, r *http.Request) 
 		"model_usage_last_request": parsed.ModelUsageLastRequest,
 		"permission_denials_last_request": parsed.PermissionDenialsLastRequest,
 		"last_result_at":           parsed.LastResultAt,
+		"window_usage":             parsed.WindowUsage,
 		"bridge_available":         true,
 	})
 }

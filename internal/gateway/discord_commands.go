@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -364,56 +365,176 @@ func (dc *DiscordChannel) cmdHealth() (string, error) {
 	return sb.String(), nil
 }
 
+// modelUsageEntry is the per-model breakdown returned in window_usage.by_model.
+type modelUsageEntry struct {
+	Requests                 int     `json:"requests"`
+	InputTokens              int64   `json:"inputTokens"`
+	OutputTokens             int64   `json:"outputTokens"`
+	CacheReadInputTokens     int64   `json:"cacheReadInputTokens"`
+	CacheCreationInputTokens int64   `json:"cacheCreationInputTokens"`
+	TotalTokens              int64   `json:"totalTokens"`
+	CostUSD                  float64 `json:"costUSD"`
+}
+
 func (dc *DiscordChannel) cmdUsage() (string, error) {
-	var data struct {
-		BridgeAvailable bool `json:"bridge_available"`
+	var limits struct {
+		BridgeAvailable bool   `json:"bridge_available"`
 		BridgeError     string `json:"bridge_error"`
 		RateLimit       *struct {
-			Status        string  `json:"status"`
-			ResetsAt      int64   `json:"resetsAt"`
-			RateLimitType string  `json:"rateLimitType"`
-			Utilization   float64 `json:"utilization"`
+			Status         string  `json:"status"`
+			ResetsAt       int64   `json:"resetsAt"`
+			RateLimitType  string  `json:"rateLimitType"`
+			Utilization    float64 `json:"utilization"`
+			IsUsingOverage bool    `json:"isUsingOverage"`
 		} `json:"rate_limit"`
-		ModelUsageLastRequest map[string]struct {
-			InputTokens  int     `json:"inputTokens"`
-			OutputTokens int     `json:"outputTokens"`
-			CostUSD      float64 `json:"costUSD"`
-		} `json:"model_usage_last_request"`
+		WindowUsage *struct {
+			StartedAt         string                     `json:"started_at"`
+			ResetsAt          string                     `json:"resets_at"`
+			SecondsUntilReset int64                      `json:"seconds_until_reset"`
+			Requests          int                        `json:"requests"`
+			TotalCostUSD      float64                    `json:"total_cost_usd"`
+			TotalTokens       int64                      `json:"total_tokens"`
+			ByModel           map[string]modelUsageEntry `json:"by_model"`
+		} `json:"window_usage"`
 	}
-	if _, err := dc.apiGet("/api/usage/limits", &data); err != nil {
+	if _, err := dc.apiGet("/api/usage/limits", &limits); err != nil {
 		return "", err
 	}
-	if !data.BridgeAvailable {
+	if !limits.BridgeAvailable {
 		msg := "Bridge unavailable"
-		if data.BridgeError != "" {
-			msg += ": " + data.BridgeError
+		if limits.BridgeError != "" {
+			msg += ": " + limits.BridgeError
 		}
 		return msg, nil
 	}
 
+	// Historical stats (optional — ignore errors).
+	var stats struct {
+		Available     bool `json:"available"`
+		TotalSessions int  `json:"total_sessions"`
+		TotalMessages int  `json:"total_messages"`
+		DailyActivity []struct {
+			Date         string `json:"date"`
+			MessageCount int    `json:"messageCount"`
+			SessionCount int    `json:"sessionCount"`
+		} `json:"daily_activity"`
+	}
+	_, _ = dc.apiGet("/api/usage/stats", &stats)
+
 	var sb strings.Builder
 	sb.WriteString("## Claude Usage\n\n")
-	if data.RateLimit != nil {
-		sb.WriteString(fmt.Sprintf("**Status:** `%s`\n", data.RateLimit.Status))
-		if data.RateLimit.RateLimitType != "" {
-			sb.WriteString(fmt.Sprintf("**Type:** `%s`\n", data.RateLimit.RateLimitType))
+
+	// A/B/C — Ventana actual
+	if limits.WindowUsage != nil && limits.WindowUsage.Requests > 0 {
+		wu := limits.WindowUsage
+		sb.WriteString("### Ventana actual (5h)\n")
+		sb.WriteString(fmt.Sprintf("**Requests:** `%d`\n", wu.Requests))
+		sb.WriteString(fmt.Sprintf("**Tokens totales:** `%s`\n", formatTokens(wu.TotalTokens)))
+		sb.WriteString(fmt.Sprintf("**Coste acumulado:** `$%.4f`\n", wu.TotalCostUSD))
+		if wu.SecondsUntilReset > 0 {
+			hours := wu.SecondsUntilReset / 3600
+			mins := (wu.SecondsUntilReset % 3600) / 60
+			unix := parseISOToUnix(wu.ResetsAt)
+			if unix > 0 {
+				sb.WriteString(fmt.Sprintf("**Reset en:** `%dh %dm` (<t:%d:R>)\n", hours, mins, unix))
+			} else {
+				sb.WriteString(fmt.Sprintf("**Reset en:** `%dh %dm`\n", hours, mins))
+			}
 		}
-		if data.RateLimit.ResetsAt > 0 {
-			sb.WriteString(fmt.Sprintf("**Resets:** <t:%d:R>\n", data.RateLimit.ResetsAt))
-		}
-		if data.RateLimit.Utilization > 0 {
-			sb.WriteString(fmt.Sprintf("**Used:** `%.0f%%`\n", data.RateLimit.Utilization*100))
-		}
+		sb.WriteString("\n")
 	} else {
-		sb.WriteString("_No rate limit event seen yet._\n")
+		sb.WriteString("_No window usage accumulated yet._\n\n")
 	}
-	if len(data.ModelUsageLastRequest) > 0 {
-		sb.WriteString("\n**Last request:**\n")
-		for model, u := range data.ModelUsageLastRequest {
-			sb.WriteString(fmt.Sprintf("- `%s` in:%d out:%d $%.4f\n", model, u.InputTokens, u.OutputTokens, u.CostUSD))
+
+	// Rate limit info
+	if limits.RateLimit != nil {
+		sb.WriteString("### Rate limit\n")
+		sb.WriteString(fmt.Sprintf("**Status:** `%s`\n", limits.RateLimit.Status))
+		if limits.RateLimit.RateLimitType != "" {
+			sb.WriteString(fmt.Sprintf("**Tipo:** `%s`\n", limits.RateLimit.RateLimitType))
 		}
+		if limits.RateLimit.Utilization > 0 {
+			sb.WriteString(fmt.Sprintf("**Utilizacion:** `%.0f%%`\n", limits.RateLimit.Utilization*100))
+		}
+		if limits.RateLimit.IsUsingOverage {
+			sb.WriteString("**Usando overage**\n")
+		}
+		sb.WriteString("\n")
 	}
+
+	// F — Breakdown por modelo
+	if limits.WindowUsage != nil && len(limits.WindowUsage.ByModel) > 0 {
+		sb.WriteString("### Por modelo\n```\n")
+		sb.WriteString(fmt.Sprintf("%-18s %5s %9s %10s\n", "Modelo", "Req", "Tokens", "Coste"))
+		sb.WriteString(strings.Repeat("-", 46) + "\n")
+		// Stable ordering by model name
+		models := make([]string, 0, len(limits.WindowUsage.ByModel))
+		for m := range limits.WindowUsage.ByModel {
+			models = append(models, m)
+		}
+		sort.Strings(models)
+		for _, model := range models {
+			m := limits.WindowUsage.ByModel[model]
+			sb.WriteString(fmt.Sprintf("%-18s %5d %9s $%8.4f\n",
+				shortModelName(model), m.Requests, formatTokens(m.TotalTokens), m.CostUSD))
+		}
+		sb.WriteString("```\n\n")
+	}
+
+	// D — Historico reciente
+	if stats.Available && len(stats.DailyActivity) > 0 {
+		sb.WriteString("### Historico reciente\n```\n")
+		sb.WriteString(fmt.Sprintf("%-10s %6s %6s\n", "fecha", "msgs", "sess"))
+		sb.WriteString(strings.Repeat("-", 26) + "\n")
+		n := 7
+		if n > len(stats.DailyActivity) {
+			n = len(stats.DailyActivity)
+		}
+		for i := 0; i < n; i++ {
+			d := stats.DailyActivity[i]
+			sb.WriteString(fmt.Sprintf("%-10s %6d %6d\n", d.Date, d.MessageCount, d.SessionCount))
+		}
+		sb.WriteString("```\n")
+		sb.WriteString(fmt.Sprintf("**Total sesiones:** `%d`  **mensajes:** `%d`\n",
+			stats.TotalSessions, stats.TotalMessages))
+	}
+
 	return sb.String(), nil
+}
+
+// formatTokens renders a token count with K/M suffix.
+func formatTokens(n int64) string {
+	if n >= 1_000_000 {
+		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
+	}
+	if n >= 1_000 {
+		return fmt.Sprintf("%.1fK", float64(n)/1_000)
+	}
+	return fmt.Sprintf("%d", n)
+}
+
+// shortModelName converts "claude-sonnet-4-6" → "Sonnet 4.6".
+func shortModelName(model string) string {
+	m := strings.TrimPrefix(model, "claude-")
+	parts := strings.Split(m, "-")
+	if len(parts) < 3 {
+		return model
+	}
+	name := strings.Title(parts[0])
+	ver := parts[1] + "." + parts[2]
+	return name + " " + ver
+}
+
+// parseISOToUnix parses an RFC3339 timestamp and returns its unix seconds, or 0.
+func parseISOToUnix(iso string) int64 {
+	if iso == "" {
+		return 0
+	}
+	t, err := time.Parse(time.RFC3339, iso)
+	if err != nil {
+		return 0
+	}
+	return t.Unix()
 }
 
 func (dc *DiscordChannel) cmdStats(days int) (string, error) {
