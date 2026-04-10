@@ -26,18 +26,13 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/autosync"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudserver"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
-	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/dashboard"
-	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/jarvis"
-	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/remote"
-	"github.com/MiguelAguiarDEV/mnemo/internal/gateway"
 	"github.com/MiguelAguiarDEV/mnemo/internal/mcp"
 	"github.com/MiguelAguiarDEV/mnemo/internal/server"
 	"github.com/MiguelAguiarDEV/mnemo/internal/setup"
@@ -1181,203 +1176,16 @@ func cmdCloudServe() {
 		return
 	}
 
-	dashCfg := dashboard.DashboardConfig{
-		AdminEmail: cloudCfg.AdminEmail,
-	}
-	// Discord DM notifications (optional — skipped if env vars are missing).
-	var notifier notifications.Notifier
-	if botToken := os.Getenv("DISCORD_BOT_TOKEN"); botToken != "" {
-		if userID := os.Getenv("DISCORD_USER_ID"); userID != "" {
-			log.Printf("[mnemo-cloud] Discord DM notifications enabled for user %s", userID)
-			notifier = notifications.NewDiscord(botToken, userID)
-		}
-	}
+	// Graceful shutdown on SIGINT/SIGTERM.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		log.Println("[mnemo-cloud] shutting down...")
+		exitFunc(0)
+	}()
 
-	// JARVIS orchestrator
-	adapter := jarvis.NewStoreAdapter(cs)
-	orch := jarvis.New(jarvis.OrchestratorConfig{
-		Store:    adapter,
-		Notifier: notifier,
-	})
-
-	// Background context — cancelled on SIGINT/SIGTERM for graceful shutdown.
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	// Start background JARVIS subsystems.
-	log.Println("[mnemo-cloud] starting JARVIS dream (memory consolidation)")
-	orch.StartDream(ctx)
-
-	log.Println("[mnemo-cloud] starting JARVIS ticker (proactive health checks)")
-	orch.StartTicker(ctx)
-
-	// ── Gateway setup ──────────────────────────────────────────────────────
-	// Create Gateway with JARVIS orchestrator as handler (non-streaming fallback).
-	gwHandler := func(gwCtx context.Context, msg gateway.IncomingMessage) (gateway.OutgoingMessage, error) {
-		convIDStr := msg.Metadata["conversation_id"]
-		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
-		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, func(string) {})
-		if chatErr != nil {
-			return gateway.OutgoingMessage{}, chatErr
-		}
-		return gateway.OutgoingMessage{
-			ChannelName: msg.ChannelName,
-			RecipientID: msg.SenderID,
-			Text:        resp,
-			Format:      gateway.FormatMarkdown,
-			ReplyTo:     msg.ReplyTo,
-		}, nil
-	}
-	// Streaming handler passes onToken callback to orchestrator.
-	// For Discord: quick-first pattern (fast answer, then background if complex).
-	// For other channels (web): full streaming Chat with onToken callback.
-	gwStreamingHandler := func(gwCtx context.Context, msg gateway.IncomingMessage, onToken func(string)) (gateway.OutgoingMessage, error) {
-		convIDStr := msg.Metadata["conversation_id"]
-		convID, _ := strconv.ParseInt(convIDStr, 10, 64)
-
-		// ── Discord: quick-first pattern ──
-		if msg.ChannelName == "discord" {
-			quick, quickErr := orch.ChatQuick(msg.SenderID, convID, msg.Text)
-			if quickErr != nil {
-				return gateway.OutgoingMessage{}, quickErr
-			}
-
-			if !quick.NeedsMore {
-				// Simple answer — return directly, let progress reporter finalize.
-				onToken(quick.Text)
-				return gateway.OutgoingMessage{
-					ChannelName: msg.ChannelName,
-					RecipientID: msg.SenderID,
-					Text:        quick.Text,
-					Format:      gateway.FormatMarkdown,
-					ReplyTo:     msg.ReplyTo,
-					Skip:        true,
-				}, nil
-			}
-
-			// Complex task — send quick response as progress, then launch background.
-			onToken(quick.Text + "\n\n⏳ Trabajando en ello...")
-			log.Printf("[mnemo-cloud] ChatQuick needs_more=true, launching ChatLong for conv %d", convID)
-
-			go func() {
-				bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-				defer cancel()
-
-				result, bgErr := orch.ChatLong(bgCtx, msg.SenderID, convID, msg.Text, nil)
-				if bgErr != nil {
-					log.Printf("[mnemo-cloud] ChatLong error for conv %d: %v", convID, bgErr)
-					// Notify via Discord DM if notifier is available.
-					if orch.Notifier() != nil {
-						_ = orch.Notifier().Send(notifications.Notification{
-							Type:    notifications.Alert,
-							Title:   "JARVIS background task failed",
-							Message: fmt.Sprintf("Error: %v", bgErr),
-						})
-					}
-					return
-				}
-
-				// Send completed result via Discord DM.
-				if orch.Notifier() != nil {
-					output := result
-					if len(output) > 1800 {
-						output = output[:1800] + "\n... (truncado)"
-					}
-					_ = orch.Notifier().Send(notifications.Notification{
-						Type:    notifications.TaskComplete,
-						Title:   "JARVIS completó la tarea",
-						Message: output,
-					})
-				}
-				log.Printf("[mnemo-cloud] ChatLong completed for conv %d, result_len=%d", convID, len(result))
-			}()
-
-			return gateway.OutgoingMessage{
-				ChannelName: msg.ChannelName,
-				RecipientID: msg.SenderID,
-				Text:        quick.Text + "\n\n⏳ Trabajando en ello...",
-				Format:      gateway.FormatMarkdown,
-				ReplyTo:     msg.ReplyTo,
-				Skip:        true,
-			}, nil
-		}
-
-		// ── Web / other channels: full streaming Chat ──
-		resp, chatErr := orch.Chat(msg.SenderID, convID, msg.Text, onToken)
-		if chatErr != nil {
-			return gateway.OutgoingMessage{}, chatErr
-		}
-		return gateway.OutgoingMessage{
-			ChannelName: msg.ChannelName,
-			RecipientID: msg.SenderID,
-			Text:        resp,
-			Format:      gateway.FormatMarkdown,
-			ReplyTo:     msg.ReplyTo,
-			Skip:        true, // progressive mode handles delivery
-		}, nil
-	}
-	gw := gateway.New(gwHandler, gateway.WithStreamingHandler(gwStreamingHandler))
-
-	// Web channel (always enabled).
-	webCh := gateway.NewWebChannel(gw)
-	if err := gw.Register(webCh); err != nil {
-		log.Printf("[mnemo-cloud] WARN: failed to register web channel: %v", err)
-	}
-
-	// Discord channel (opt-in via JARVIS_DISCORD_ENABLED).
-	discordEnabled := os.Getenv("JARVIS_DISCORD_ENABLED") == "true"
-	discordToken := os.Getenv("DISCORD_BOT_TOKEN")
-	discordUserIDs := os.Getenv("DISCORD_USER_ID")
-
-	var discordCh *gateway.DiscordChannel
-	if discordEnabled && discordToken != "" {
-		allowedUsers := strings.Split(discordUserIDs, ",")
-		// JARVIS owner UUID used as SenderID for Discord-originated messages
-		// (must exist in cloud_users). Read from env, fall back to the
-		// single-user hardcoded UUID used elsewhere in the orchestrator.
-		jarvisOwnerUserID := os.Getenv("JARVIS_OWNER_USER_ID")
-		if jarvisOwnerUserID == "" {
-			jarvisOwnerUserID = os.Getenv("MNEMO_OWNER_USER_ID")
-		}
-		if jarvisOwnerUserID == "" {
-			jarvisOwnerUserID = "2b8c5ccb-f82e-49f2-b8d7-9b9e7f4a4e03"
-		}
-		discordCh = gateway.NewDiscordChannel(discordToken, allowedUsers,
-			gateway.WithDiscordChannelGateway(gw),
-			gateway.WithDiscordConversationStore(cs),
-			gateway.WithDiscordDefaultUserID(jarvisOwnerUserID),
-			gateway.WithDiscordGuildID(os.Getenv("DISCORD_GUILD_ID")),
-			gateway.WithDiscordAthenaURL("http://localhost:8080"),
-			gateway.WithDiscordAPIKey(os.Getenv("MNEMO_API_KEY")),
-		)
-		if err := gw.Register(discordCh); err != nil {
-			log.Printf("[mnemo-cloud] WARN: failed to register discord channel: %v", err)
-		} else {
-			log.Println("[mnemo-cloud] Discord channel registered (JARVIS_DISCORD_ENABLED=true)")
-		}
-	} else if discordEnabled && discordToken == "" {
-		log.Println("[mnemo-cloud] WARN: JARVIS_DISCORD_ENABLED=true but DISCORD_BOT_TOKEN is empty — Discord channel not started")
-	}
-
-	// Start Gateway (starts all registered channels).
-	if err := gw.Start(ctx); err != nil {
-		log.Printf("[mnemo-cloud] WARN: gateway start failed: %v", err)
-	}
-
-	opts := []cloudserver.Option{
-		cloudserver.WithDashboard(dashCfg),
-		cloudserver.WithDSN(cloudCfg.DSN),
-		cloudserver.WithJARVIS(orch),
-		cloudserver.WithJobs(jarvis.NewJobServiceAdapter(orch)),
-		cloudserver.WithGateway(gw),
-		cloudserver.WithWebChannel(webCh),
-	}
-
-	if notifier != nil {
-		opts = append(opts, cloudserver.WithNotifier(notifier))
-	}
-
-	srv := cloudServerNew(cs, authSvc, cloudCfg.Port, opts...)
+	srv := cloudServerNew(cs, authSvc, cloudCfg.Port)
 	if err := cloudServerStart(srv); err != nil {
 		fatal(err)
 		return

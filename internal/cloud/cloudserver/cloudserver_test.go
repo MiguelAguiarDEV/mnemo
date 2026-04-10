@@ -216,8 +216,8 @@ func TestHealthNoAuth(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("health: expected status=ok, got %v", body["status"])
 	}
-	if body["service": "mnemo-cloud" {
-		t.Fatalf("health: expected service": "mnemo-cloud, got %v", body["service"])
+	if body["service"] != "mnemo-cloud" {
+		t.Fatalf("health: expected service=mnemo-cloud, got %v", body["service"])
 	}
 }
 

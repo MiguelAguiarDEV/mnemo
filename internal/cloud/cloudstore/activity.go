@@ -8,7 +8,7 @@ import (
 
 // ActivityEntry represents a single entry in the unified activity feed.
 type ActivityEntry struct {
-	Type       string `json:"type"`                 // tool_call, observation, session, task_update
+	Type       string `json:"type"`       // observation, session
 	ID         int64  `json:"id"`
 	Project    string `json:"project"`
 	Summary    string `json:"summary"`
@@ -16,8 +16,8 @@ type ActivityEntry struct {
 	Data       any    `json:"data,omitempty"`
 }
 
-// ActivityFeed returns a unified feed of recent activity across tool calls,
-// observations, sessions, and task events. Results are ordered by occurred_at DESC.
+// ActivityFeed returns a unified feed of recent activity across
+// observations and sessions. Results are ordered by occurred_at DESC.
 func (cs *CloudStore) ActivityFeed(userID, project string, since *time.Time, limit int) ([]ActivityEntry, error) {
 	if limit <= 0 {
 		limit = 50
@@ -57,16 +57,6 @@ func (cs *CloudStore) ActivityFeed(userID, project string, since *time.Time, lim
 
 	query := fmt.Sprintf(`
 		SELECT type, id, project, summary, occurred_at FROM (
-			SELECT 'tool_call' AS type,
-				id,
-				COALESCE(project, '') AS project,
-				tool_name AS summary,
-				occurred_at
-			FROM agent_tool_calls
-			WHERE %s
-
-			UNION ALL
-
 			SELECT 'observation' AS type,
 				id,
 				COALESCE(project, '') AS project,
@@ -84,24 +74,11 @@ func (cs *CloudStore) ActivityFeed(userID, project string, since *time.Time, lim
 				started_at AS occurred_at
 			FROM cloud_sessions
 			WHERE %s
-
-			UNION ALL
-
-			SELECT 'task_update' AS type,
-				te.id,
-				COALESCE(t.project, '') AS project,
-				te.event_type AS summary,
-				te.occurred_at
-			FROM task_events te
-			JOIN tasks t ON t.id = te.task_id
-			WHERE %s
 		) AS activity
 		ORDER BY occurred_at DESC
 		LIMIT %s`,
-		buildWhere("user_id", "project", "occurred_at"),
 		buildWhere("user_id", "project", "created_at"),
 		buildWhere("user_id", "project", "started_at"),
-		buildWhere("te.user_id", "t.project", "te.occurred_at"),
 		limitParam,
 	)
 

@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"time"
-
-	"github.com/MiguelAguiarDEV/mnemo/internal/athena"
 )
 
 // ─── Defaults ─────────────────────────────────────────────────────────────
@@ -27,7 +25,7 @@ const (
 // whose mtime doubles as the "last consolidated at" timestamp.
 type Consolidator struct {
 	mnemoBin  string
-	runner     athena.CommandRunner
+	runner     CommandRunner
 	lock       *lockFile
 	logger     *slog.Logger
 	minAge     time.Duration
@@ -75,7 +73,7 @@ func WithProject(p string) Option {
 }
 
 // WithCommandRunner sets the command runner (for testing).
-func WithCommandRunner(r athena.CommandRunner) Option {
+func WithCommandRunner(r CommandRunner) Option {
 	return func(c *Consolidator) { c.runner = r }
 }
 
@@ -83,7 +81,7 @@ func WithCommandRunner(r athena.CommandRunner) Option {
 func New(opts ...Option) *Consolidator {
 	c := &Consolidator{
 		mnemoBin:  "mnemo",
-		runner:     athena.DefaultCommandRunner(),
+		runner:     DefaultCommandRunner(),
 		logger:     slog.Default(),
 		minAge:     DefaultMinAge,
 		minObs:     DefaultMinObs,

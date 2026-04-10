@@ -15,46 +15,21 @@ import (
 
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/auth"
 	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/cloudstore"
-	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/dashboard"
-	"github.com/MiguelAguiarDEV/mnemo/internal/cloud/notifications"
-	"github.com/MiguelAguiarDEV/mnemo/internal/gateway"
 )
 
 // ─── CloudServer ────────────────────────────────────────────────────────────
 
-// ChatService is the interface the server needs from the JARVIS orchestrator.
-// Defined here to avoid importing the jarvis package (no circular deps).
-type ChatService interface {
-	Chat(userID string, conversationID int64, message string, onToken func(string)) (string, error)
-}
-
-// JobService is the interface the server needs for async job management.
-// Defined here to avoid importing the jarvis/athena packages (no circular deps).
-type JobService interface {
-	CreateJob(task, project, workingDir, context string) string
-	GetJob(id string) (map[string]any, bool)
-	ListJobs() []map[string]any
-}
-
 // CloudServer provides the HTTP API for Mnemo cloud mode.
 type CloudServer struct {
-	store   *cloudstore.CloudStore
-	auth    *auth.Service
-	mux     *http.ServeMux
-	port    int
-	dsn       string // Postgres DSN for pq.NewListener (SSE)
-	jarvis    ChatService
-	jobSvc    JobService
+	store     *cloudstore.CloudStore
+	auth      *auth.Service
+	mux       *http.ServeMux
+	port      int
 	startTime time.Time
-	listen  func(network, address string) (net.Listener, error)
-	serve   func(net.Listener, http.Handler) error
-	now     func() time.Time
-	notifier notifications.Notifier
-	limit    *authRateLimiter
-	dashCfg  dashboard.DashboardConfig
-	costQuerier CostQuerier // optional override for testing cost handlers
-	gw          *gateway.Gateway    // multi-channel gateway
-	webChannel  *gateway.WebChannel // web channel bridge for gateway routing
+	listen    func(network, address string) (net.Listener, error)
+	serve     func(net.Listener, http.Handler) error
+	now       func() time.Time
+	limit     *authRateLimiter
 }
 
 // New creates a new CloudServer and registers all routes.
@@ -80,58 +55,7 @@ func New(store *cloudstore.CloudStore, authSvc *auth.Service, port int, opts ...
 // Option configures a CloudServer.
 type Option func(*CloudServer)
 
-// WithDashboard enables the embedded web dashboard with the given config.
-func WithDashboard(cfg dashboard.DashboardConfig) Option {
-	return func(s *CloudServer) {
-		s.dashCfg = cfg
-	}
-}
-
-// WithJARVIS enables the JARVIS chat orchestrator.
-func WithJARVIS(j ChatService) Option {
-	return func(s *CloudServer) {
-		s.jarvis = j
-	}
-}
-
-// WithJobs enables the jobs API for async delegation.
-func WithJobs(j JobService) Option {
-	return func(s *CloudServer) {
-		s.jobSvc = j
-	}
-}
-
-// WithNotifier sets the notification sender (e.g. Discord DM).
-func WithNotifier(n notifications.Notifier) Option {
-	return func(s *CloudServer) {
-		s.notifier = n
-	}
-}
-
-// WithGateway sets the multi-channel gateway for message routing.
-func WithGateway(gw *gateway.Gateway) Option {
-	return func(s *CloudServer) {
-		s.gw = gw
-	}
-}
-
-// WithWebChannel sets the web channel bridge for gateway routing.
-// When set, chat messages flow through WebChannel → Gateway → Orchestrator.
-func WithWebChannel(wc *gateway.WebChannel) Option {
-	return func(s *CloudServer) {
-		s.webChannel = wc
-	}
-}
-
-// WithDSN sets the Postgres DSN used by the SSE handler for pq.NewListener.
-func WithDSN(dsn string) Option {
-	return func(s *CloudServer) {
-		s.dsn = dsn
-	}
-}
-
-// Start binds to the configured port and serves HTTP traffic. It matches
-// the pattern from internal/server/server.go.
+// Start binds to the configured port and serves HTTP traffic.
 func (s *CloudServer) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	listenFn := s.listen
@@ -184,62 +108,13 @@ func (s *CloudServer) routes() {
 	s.mux.HandleFunc("GET /sync/search", s.withAuth(s.handleSearch))
 	s.mux.HandleFunc("GET /sync/context", s.withAuth(s.handleContext))
 
-	// Knowledge graph (jarvis-dashboard)
+	// Knowledge graph
 	s.mux.HandleFunc("GET /api/graph", s.withAuth(s.handleGraph))
 	s.mux.HandleFunc("GET /api/sessions/{id}/observations", s.withAuth(s.handleSessionObservations))
 	s.mux.HandleFunc("GET /api/observations/{id}", s.withAuth(s.handleGetObservation))
 
-	// Traces API (jarvis-dashboard)
-	s.mux.HandleFunc("POST /traces/tool-call", s.withAuth(s.handleAddToolCall))
-	s.mux.HandleFunc("GET /traces/session/{id}", s.withAuth(s.handleSessionTraces))
-	s.mux.HandleFunc("GET /traces/stats", s.withAuth(s.handleTraceStats))
-
-	// System Metrics API
-	s.mux.HandleFunc("POST /api/metrics", s.withAuth(s.handleRecordMetric))
-	s.mux.HandleFunc("GET /api/metrics", s.withAuth(s.handleGetMetrics))
-	s.mux.HandleFunc("GET /api/system-info", s.withAuth(s.handleSystemInfo))
-
-	// Tasks API (jarvis-mvp)
-	s.mux.HandleFunc("POST /api/tasks", s.withAuth(s.handleCreateTask))
-	s.mux.HandleFunc("GET /api/tasks", s.withAuth(s.handleListTasks))
-	s.mux.HandleFunc("GET /api/tasks/{id}", s.withAuth(s.handleGetTask))
-	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.withAuth(s.handleUpdateTask))
-	s.mux.HandleFunc("DELETE /api/tasks/{id}", s.withAuth(s.handleDeleteTask))
-	s.mux.HandleFunc("POST /api/tasks/{id}/children", s.withAuth(s.handleCreateSubtask))
-
-	// Jobs API (async delegation)
-	s.mux.HandleFunc("GET /api/jobs", s.withAuth(s.handleListJobs))
-	s.mux.HandleFunc("GET /api/jobs/{id}", s.withAuth(s.handleGetJob))
-	s.mux.HandleFunc("POST /api/jobs", s.withAuth(s.handleCreateJob))
-
-	// Notifications (jarvis-mvp)
-	s.mux.HandleFunc("POST /api/notifications", s.withAuth(s.handleSendNotification))
-
-	// Cost tracking API (jarvis-dashboard)
-	s.mux.HandleFunc("GET /api/costs", s.withAuth(s.handleCosts))
-	s.mux.HandleFunc("GET /api/costs/sessions", s.withAuth(s.handleCostSessions))
-	s.mux.HandleFunc("GET /api/costs/budget", s.withAuth(s.handleCostBudget))
-
-	// Claude Code usage tracking (subscription rate limits + local stats cache)
-	s.mux.HandleFunc("GET /api/usage/limits", s.withAuth(s.handleUsageLimits))
-	s.mux.HandleFunc("GET /api/usage/stats", s.withAuth(s.handleUsageStats))
-
-	// Activity feed (jarvis-mvp)
+	// Activity feed (memory-only: observations + sessions)
 	s.mux.HandleFunc("GET /api/activity", s.withAuth(s.handleActivity))
-
-	// SSE events (jarvis-mvp)
-	s.mux.HandleFunc("GET /api/events", s.withAuth(s.handleEvents))
-
-	// Chat + Conversations (jarvis-mvp)
-	s.mux.HandleFunc("POST /api/chat", s.withAuth(s.handleChatSSE))
-	s.mux.HandleFunc("POST /api/conversations", s.withAuth(s.handleCreateConversation))
-	s.mux.HandleFunc("GET /api/conversations", s.withAuth(s.handleListConversations))
-	s.mux.HandleFunc("DELETE /api/conversations/{id}", s.withAuth(s.handleDeleteConversation))
-	s.mux.HandleFunc("PATCH /api/conversations/{id}", s.withAuth(s.handleRenameConversation))
-	s.mux.HandleFunc("GET /api/conversations/{id}/messages", s.withAuth(s.handleGetMessages))
-
-	// Dashboard — embedded web UI
-	dashboard.Mount(s.mux, s.store, s.auth, s.dashCfg)
 }
 
 // ─── Health ─────────────────────────────────────────────────────────────────
