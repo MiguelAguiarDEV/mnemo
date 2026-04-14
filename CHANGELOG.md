@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/MiguelAguiarDEV/mnemo/compare/v0.1.2...v0.1.3) (2026-04-14)
+
+
+### Bug Fixes
+
+* **release:** disable Homebrew tap publish until token rotated ([#5](https://github.com/MiguelAguiarDEV/mnemo/issues/5)) ([900c42a](https://github.com/MiguelAguiarDEV/mnemo/commit/900c42aa25b09984a992f94398af5fa9c8434ea4))
+
 ## [0.1.2](https://github.com/MiguelAguiarDEV/mnemo/compare/v0.1.1...v0.1.2) (2026-04-14)
 
 
