@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/MiguelAguiarDEV/mnemo/compare/v0.1.1...v0.1.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* **ci:** trigger GoReleaser inline from release-please job ([#3](https://github.com/MiguelAguiarDEV/mnemo/issues/3)) ([4f271be](https://github.com/MiguelAguiarDEV/mnemo/commit/4f271be17f3602f979aaba1fbc36fced617d8fb4))
+
 ## [0.1.1](https://github.com/MiguelAguiarDEV/mnemo/compare/v0.1.0...v0.1.1) (2026-04-14)
 
 
