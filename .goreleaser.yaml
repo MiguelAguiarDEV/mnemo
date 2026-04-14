@@ -41,14 +41,16 @@ changelog:
       - "^test:"
       - "^ci:"
 
-brews:
-  - repository:
-      owner: MiguelAguiarDEV
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    name: mnemo
-    homepage: "https://github.com/MiguelAguiarDEV/engram"
-    description: "Persistent memory for AI coding agents. Agent-agnostic, single binary, zero dependencies."
-    license: "MIT"
-    commit_msg_template: "chore: update mnemo formula to {{ .Tag }}"
+# Homebrew tap publication disabled until HOMEBREW_TAP_TOKEN is rotated.
+# Re-enable by uncommenting this block once the secret is valid.
+# brews:
+#   - repository:
+#       owner: MiguelAguiarDEV
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+#     directory: Formula
+#     name: mnemo
+#     homepage: "https://github.com/MiguelAguiarDEV/mnemo"
+#     description: "Persistent memory for AI coding agents. Agent-agnostic, single binary, zero dependencies."
+#     license: "MIT"
+#     commit_msg_template: "chore: update mnemo formula to {{ .Tag }}"
