@@ -2210,6 +2210,7 @@ func (s *Store) backfillSessionSyncMutationsTx(tx *sql.Tx, project string) error
 			  AND sm.entity = ?
 			  AND sm.entity_key = sessions.id
 			  AND sm.source = ?
+			  AND sm.acked_at IS NULL
 		  )
 		ORDER BY started_at ASC, id ASC`,
 		project, DefaultSyncTargetKey, SyncEntitySession, SyncSourceLocal,
@@ -2244,6 +2245,7 @@ func (s *Store) backfillObservationSyncMutationsTx(tx *sql.Tx, project string) e
 			  AND sm.entity = ?
 			  AND sm.entity_key = observations.sync_id
 			  AND sm.source = ?
+			  AND sm.acked_at IS NULL
 		  )
 		ORDER BY id ASC`,
 		project, DefaultSyncTargetKey, SyncEntityObservation, SyncSourceLocal,
@@ -2277,6 +2279,7 @@ func (s *Store) backfillPromptSyncMutationsTx(tx *sql.Tx, project string) error 
 			  AND sm.entity = ?
 			  AND sm.entity_key = user_prompts.sync_id
 			  AND sm.source = ?
+			  AND sm.acked_at IS NULL
 		  )
 		ORDER BY id ASC`,
 		project, DefaultSyncTargetKey, SyncEntityPrompt, SyncSourceLocal,

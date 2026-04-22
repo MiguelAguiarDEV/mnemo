@@ -3182,6 +3182,70 @@ func TestEnrollProjectBackfillIsIdempotentAndSkipsExistingMutations(t *testing.T
 	}
 }
 
+// TestEnrollProjectRequeuesSkipAckedMutations regression-tests the fix for the
+// silent-drop bug where mutations enqueued BEFORE a project is enrolled get
+// skip-acked (acked_at set, never pushed) and then the subsequent `enroll`
+// fails to re-queue them because the backfill's NOT EXISTS dedup didn't
+// distinguish pending from acked mutations. Reproduces the 2026-04-22 incident
+// where 3 `mnemo save`s to project "personal" landed in local SQLite but never
+// made it to the cloud even after `cloud enroll personal`.
+func TestEnrollProjectRequeuesSkipAckedMutations(t *testing.T) {
+	s := newTestStore(t)
+
+	// 1. Save an observation under project "dropped" WITHOUT enrolling first.
+	//    The store writes rows to sessions/observations AND enqueues
+	//    sync_mutations (session + observation upsert), all pending.
+	if _, err := s.db.Exec(
+		`INSERT INTO sessions (id, project, directory) VALUES (?, ?, ?)`,
+		"sess-dropped", "dropped", "/tmp/dropped",
+	); err != nil {
+		t.Fatalf("insert session: %v", err)
+	}
+	if _, err := s.db.Exec(
+		`INSERT INTO observations (sync_id, session_id, type, title, content, project, scope, normalized_hash, revision_count, duplicate_count, last_seen_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))`,
+		"obs-dropped", "sess-dropped", "note", "Dropped memory", "This would be lost without the fix", "dropped", "project", hashNormalized("lost-without-fix"),
+	); err != nil {
+		t.Fatalf("insert observation: %v", err)
+	}
+	if _, err := s.db.Exec(
+		`INSERT INTO sync_mutations (target_key, entity, entity_key, op, payload, source, project)
+		 VALUES (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)`,
+		DefaultSyncTargetKey, SyncEntitySession, "sess-dropped", SyncOpUpsert, `{"id":"sess-dropped","project":"dropped"}`, SyncSourceLocal, "dropped",
+		DefaultSyncTargetKey, SyncEntityObservation, "obs-dropped", SyncOpUpsert, `{"sync_id":"obs-dropped","project":"dropped"}`, SyncSourceLocal, "dropped",
+	); err != nil {
+		t.Fatalf("insert mutations: %v", err)
+	}
+
+	// 2. Simulate push-before-enroll: SkipAckNonEnrolled marks them acked
+	//    because "dropped" is not in sync_enrolled_projects.
+	skipped, err := s.SkipAckNonEnrolledMutations(DefaultSyncTargetKey)
+	if err != nil {
+		t.Fatalf("skip-ack: %v", err)
+	}
+	if skipped != 2 {
+		t.Fatalf("expected 2 mutations skip-acked, got %d", skipped)
+	}
+
+	// 3. Now enroll the project. Before the fix, backfill's NOT EXISTS
+	//    would see the (acked) mutations and refuse to re-queue anything.
+	if err := s.EnrollProject("dropped"); err != nil {
+		t.Fatalf("enroll: %v", err)
+	}
+
+	// 4. Expect one fresh PENDING mutation per entity (session + observation).
+	var pending int
+	if err := s.db.QueryRow(
+		`SELECT COUNT(*) FROM sync_mutations WHERE project = ? AND acked_at IS NULL`,
+		"dropped",
+	).Scan(&pending); err != nil {
+		t.Fatalf("count pending: %v", err)
+	}
+	if pending != 2 {
+		t.Fatalf("expected 2 pending mutations after re-enroll, got %d (fix did not re-queue skip-acked mutations)", pending)
+	}
+}
+
 func TestNewRepairsAlreadyEnrolledProjectsMissingHistoricalSyncMutations(t *testing.T) {
 	dataDir := t.TempDir()
 	dbPath := filepath.Join(dataDir, "mnemo.db")
